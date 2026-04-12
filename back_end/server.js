@@ -52,7 +52,7 @@ app.get('/api/curse/:id_client', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8889;
 app.listen(PORT, () => {
     console.log(`Serverul de backend ruleaza pe portul ${PORT}`);
 });
