@@ -1,11 +1,13 @@
+
 const express = require('express');
-const cors = require('cors');
 const mysql = require('mysql2');
-require('dotenv').config();
+const cors = require('cors'); // 1. Importăm pachetul cors
 
 const app = express();
-app.use(cors());
+
+app.use(cors()); // 2. Permitem frontend-ului să ne apeleze!
 app.use(express.json());
+
 
 // Configurare conexiune baza de date pentru DBngin
 const db = mysql.createConnection({
@@ -53,7 +55,7 @@ app.get('/api/curse/:id_client', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 5500;
+const PORT = 5050;
 app.listen(PORT, () => {
     console.log(`Serverul de backend ruleaza pe portul ${PORT}`);
 });

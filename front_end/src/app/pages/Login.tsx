@@ -19,7 +19,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   if (mode === 'login') {
     try {
       // Facem apelul către server.js
-      const response = await fetch('http://localhost:5000/api/login', {
+      const response = await fetch('http://localhost:5050/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
