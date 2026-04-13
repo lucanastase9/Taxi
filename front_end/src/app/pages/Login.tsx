@@ -9,54 +9,59 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState(''); // Mesaj pentru creare cont reușită
   const navigate = useNavigate();
-  const [error, setError] = useState(''); // Aici salvăm mesajul de eroare de la server
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError(''); // Ștergem erorile vechi la o nouă încercare de login
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMessage('');
 
-  if (mode === 'login') {
+    // Determinăm endpoint-ul în funcție de modul selectat (login sau signup)
+    const endpoint = mode === 'login' ? '/api/login' : '/api/signup';
+    
+    // Pregătim datele pentru trimitere
+    // Notă: folosim 'parola' pentru backend conform setărilor tale din server.js
+    const payload = mode === 'login' 
+      ? { email, parola: password } 
+      : { nume: name, email, parola: password };
+
     try {
-      // Facem apelul către server.js
-      const response = await fetch('http://localhost:5050/api/login', {
+      const response = await fetch(`http://localhost:5050${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        // ATENȚIE: În frontend variabila e 'password', dar în backend am zis că așteptăm 'parola'
-        body: JSON.stringify({ 
-          email: email, 
-          parola: password 
-        }), 
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        // Dacă backend-ul a zis "Autentificare cu succes!"
-        console.log("Datele primite de la server:", data.user);
-        
-        // Aici te mutăm pe pagina corectă în funcție de ce ai selectat
-        if (userType === 'client') {
-          navigate('/client');
+        if (mode === 'login') {
+          // Logică reușită pentru Login
+          localStorage.setItem('user', JSON.stringify(data.user));
+          if (userType === 'client') {
+            navigate('/client');
+          } else {
+            navigate('/driver');
+          }
         } else {
-          navigate('/driver'); 
+          // Logică reușită pentru Sign Up
+          setSuccessMessage("Cont creat cu succes! Te rugăm să te autentifici.");
+          setMode('login'); // Îl mutăm automat la login
+          setName(''); // Resetăm numele
         }
       } else {
-        // Dacă backend-ul a zis "Email sau parolă incorectă"
+        // Mesaj de eroare de la backend (ex: "Email deja înregistrat")
         setError(data.message);
       }
-
     } catch (err) {
-      console.error('Eroare de rețea:', err);
+      console.error('Eroare rețea:', err);
       setError('Nu mă pot conecta la server. Verifică dacă backend-ul este pornit!');
     }
-  } else {
-    // Aici vom pune pe viitor logica pentru Sign Up (Creare cont nou)
-    console.log("Modul de Sign Up urmează să fie implementat!");
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -74,7 +79,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="bg-card rounded-lg p-8 border border-border shadow-sm">
           <div className="flex gap-2 mb-8 bg-muted rounded-lg p-1">
             <button
-              onClick={() => setMode('login')}
+              onClick={() => { setMode('login'); setError(''); setSuccessMessage(''); }}
               className={`flex-1 py-2 rounded transition-colors ${
                 mode === 'login' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
               }`}
@@ -82,7 +87,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               Login
             </button>
             <button
-              onClick={() => setMode('signup')}
+              onClick={() => { setMode('signup'); setError(''); setSuccessMessage(''); }}
               className={`flex-1 py-2 rounded transition-colors ${
                 mode === 'signup' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
               }`}
@@ -116,12 +121,19 @@ const handleSubmit = async (e: React.FormEvent) => {
             </button>
           </div>
 
-{/* Afișăm eroarea aici, cu roșu, dacă există */}
-{error && (
-  <div className="mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm text-center">
-    {error}
-  </div>
-)}
+          {/* Afișare erori */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm text-center font-medium">
+              {error}
+            </div>
+          )}
+
+          {/* Afișare mesaj succes */}
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-500/10 border border-green-500 rounded-lg text-green-600 text-sm text-center font-medium">
+              {successMessage}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === 'signup' && (
@@ -161,7 +173,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground py-3 rounded-lg hover:opacity-90 transition-opacity"
+              className="w-full bg-primary text-primary-foreground py-3 rounded-lg hover:opacity-90 transition-opacity font-semibold"
             >
               {mode === 'login' ? 'Login' : 'Sign Up'} as {userType === 'client' ? 'Client' : 'Driver'}
             </button>

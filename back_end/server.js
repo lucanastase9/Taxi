@@ -29,18 +29,26 @@ db.connect((err) => {
 // --- RUTE API ---
 
 // 1. Ruta de Login (Exemplu pentru ecranele tale de login)
-app.post('/api/login', (req, res) => {
-    const { email, parola } = req.body;
-    const query = 'SELECT * FROM client WHERE mail = ? AND parola = ?';
+app.post('/api/signup', (req, res) => {
+    const { nume, email, parola } = req.body;
 
-    db.query(query, [email, parola], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        
-        if (results.length > 0) {
-            res.json({ success: true, user: results[0] });
-        } else {
-            res.status(401).json({ success: false, message: "Email sau parola incorecta" });
+    const sqlInsert = 'INSERT INTO client (nume, mail, parola) VALUES (?, ?, ?)';
+    
+    db.query(sqlInsert, [nume, email, parola], (err, result) => {
+        if (err) {
+            // Verificăm dacă eroarea este cauzată de constrângerea UNIQUE
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Această adresă de email este deja utilizată!" 
+                });
+            }
+            // Alt tip de eroare (conexiune, sintaxă etc.)
+            console.error('❌ Eroare SQL:', err.message);
+            return res.status(500).json({ success: false, message: "Eroare la crearea contului." });
         }
+        
+        res.json({ success: true, message: "Cont creat cu succes!" });
     });
 });
 
@@ -93,5 +101,52 @@ app.post('/api/login', (req, res) => {
             console.log(`⚠️ Încercare eșuată de login pentru: ${email}`);
             res.status(401).json({ success: false, message: "Email sau parolă incorectă!" });
         }
+    });
+});
+
+
+// --- RUTA PENTRU SIGN UP (CREARE CONT) ---
+app.post('/api/signup', (req, res) => {
+    const { nume, email, parola } = req.body;
+
+    // Validare de bază: să nu avem câmpuri goale
+    if (!nume || !email || !parola) {
+        return res.status(400).json({ success: false, message: "Toate câmpurile sunt obligatorii!" });
+    }
+
+    // Pasul 1: Verificăm dacă email-ul există deja (pentru a respecta unicitatea) 
+    const checkUser = 'SELECT mail FROM client WHERE mail = ?';
+    
+    db.query(checkUser, [email], (err, results) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+
+        if (results.length > 0) {
+            return res.status(400).json({ success: false, message: "Acest email este deja înregistrat!" });
+        }
+
+        // Pasul 2: Inserăm noul client [cite: 493]
+        const insertQuery = 'INSERT INTO client (nume, mail, parola) VALUES (?, ?, ?)';
+        db.query(insertQuery, [nume, email, parola], (err, result) => {
+            if (err) {
+                console.error('❌ Eroare la inserare:', err.message);
+                return res.status(500).json({ success: false, message: "Eroare la crearea contului." });
+            }
+            
+            console.log(`✅ Utilizator nou creat: ${email}`);
+            res.json({ success: true, message: "Cont creat cu succes! Acum te poți loga." });
+        });
+    });
+});
+
+app.put('/api/update-profile', (req, res) => {
+    const { id_client, telefon, adresa, metoda_plata } = req.body;
+
+    const query = 'UPDATE client SET telefon = ?, adresa = ?, metoda_plata = ? WHERE id_client = ?';
+    
+    db.query(query, [telefon, adresa, metoda_plata, id_client], (err, result) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        
+        // Trimitem înapoi confirmarea ca să putem actualiza și LocalStorage
+        res.json({ success: true, message: "Profil actualizat!" });
     });
 });
