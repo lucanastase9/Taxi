@@ -1,6 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { Mail, Phone, MapPin, CreditCard, AlertCircle, Navigation, User, Car, History, Star, LogOut, CheckCircle } from 'lucide-react';
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 export default function ClientAccount() {
   const [user, setUser] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -100,7 +106,7 @@ export default function ClientAccount() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900">{user.nume}</h2>
-              <p className="text-sm text-gray-500">Member since January 2024</p>
+              <p className="text-sm text-gray-500">One of the best clients</p>
             </div>
           </div>
 
