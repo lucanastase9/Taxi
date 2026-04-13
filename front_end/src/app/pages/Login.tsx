@@ -10,15 +10,53 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const navigate = useNavigate();
+  const [error, setError] = useState(''); // Aici salvăm mesajul de eroare de la server
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (userType === 'client') {
-      navigate('/client');
-    } else {
-      navigate('/driver');
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError(''); // Ștergem erorile vechi la o nouă încercare de login
+
+  if (mode === 'login') {
+    try {
+      // Facem apelul către server.js
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // ATENȚIE: În frontend variabila e 'password', dar în backend am zis că așteptăm 'parola'
+        body: JSON.stringify({ 
+          email: email, 
+          parola: password 
+        }), 
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Dacă backend-ul a zis "Autentificare cu succes!"
+        console.log("Datele primite de la server:", data.user);
+        
+        // Aici te mutăm pe pagina corectă în funcție de ce ai selectat
+        if (userType === 'client') {
+          navigate('/client');
+        } else {
+          navigate('/driver'); 
+        }
+      } else {
+        // Dacă backend-ul a zis "Email sau parolă incorectă"
+        setError(data.message);
+      }
+
+    } catch (err) {
+      console.error('Eroare de rețea:', err);
+      setError('Nu mă pot conecta la server. Verifică dacă backend-ul este pornit!');
     }
-  };
+  } else {
+    // Aici vom pune pe viitor logica pentru Sign Up (Creare cont nou)
+    console.log("Modul de Sign Up urmează să fie implementat!");
+  }
+};
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -77,6 +115,13 @@ export default function Login() {
               <div className="text-sm">Driver</div>
             </button>
           </div>
+
+{/* Afișăm eroarea aici, cu roșu, dacă există */}
+{error && (
+  <div className="mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm text-center">
+    {error}
+  </div>
+)}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === 'signup' && (
