@@ -80,7 +80,7 @@ export default function ClientAccount() {
   return (
     <div className="flex-1 p-10 bg-[#f8f5f0] min-h-screen">
       <header className="mb-8 flex justify-between items-center max-w-5xl">
-        <h1 className="text-2xl font-semibold text-gray-800">Account client</h1>
+        <h1 className="text-2xl font-semibold text-gray-800">Cont client</h1>
         {showSuccess && (
           <div className="flex items-center gap-2 text-green-600 font-medium animate-bounce">
             <CheckCircle size={18} /> Date salvate cu succes!
