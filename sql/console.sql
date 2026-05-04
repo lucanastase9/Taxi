@@ -3,9 +3,9 @@
 /*#############################################################*/
 /* PARTEA 1 - STERGEREA SI RECREAREA BAZEI DE DATE      */
 
-DROP DATABASE IF EXISTS taxi_service;
-CREATE DATABASE taxi_service;
-USE taxi_service;
+DROP DATABASE IF EXISTS taxidb;
+CREATE DATABASE taxidb;
+USE taxidb;
 
 /*#############################################################*/
 
@@ -133,6 +133,7 @@ CREATE TABLE recenzie (
 CREATE TABLE certificat (
     id_certificat INT AUTO_INCREMENT PRIMARY KEY,
     sofer_id_sofer INT,
+    certificat_tip VARCHAR(45),
     certificat_poza MEDIUMBLOB,
     data_exp_certif DATE,
     FOREIGN KEY (sofer_id_sofer) REFERENCES sofer(id_sofer) ON DELETE CASCADE
@@ -204,9 +205,9 @@ INSERT INTO recenzie (sofer_id_sofer, client_id_client, rating, comentarii, tip_
 (1, 3, 5, 'Client la timp, cursa placuta.', 'sofer');
 
 -- 12. Inserare Certificate Soferi
-INSERT INTO certificat (sofer_id_sofer, certificat_poza, data_exp_certif) VALUES
-(1, NULL, '2026-05-20'),
-(2, NULL, '2025-10-15');
+INSERT INTO certificat (sofer_id_sofer, certificat_tip, certificat_poza, data_exp_certif) VALUES
+(1, NULL, NULL, '2026-05-20'),
+(2, NULL, NULL,'2025-10-15');
 
 /*#############################################################*/
 
