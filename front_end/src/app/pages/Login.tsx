@@ -13,19 +13,18 @@ export default function Login() {
   const [successMessage, setSuccessMessage] = useState(''); // Mesaj pentru creare cont reușită
   const navigate = useNavigate();
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
 
-    // Determinăm endpoint-ul în funcție de modul selectat (login sau signup)
     const endpoint = mode === 'login' ? '/api/login' : '/api/signup';
-    
-    // Pregătim datele pentru trimitere
-    // Notă: folosim 'parola' pentru backend conform setărilor tale din server.js
-    const payload = mode === 'login' 
-      ? { email, parola: password } 
-      : { nume: name, email, parola: password };
+
+    // Adăugăm userType în payload pentru ca backend-ul să știe tabelul
+    const payload = mode === 'login'
+        ? { email, parola: password, userType }
+        : { nume: name, email, parola: password, userType };
 
     try {
       const response = await fetch(`http://localhost:5050${endpoint}`, {
@@ -40,7 +39,6 @@ export default function Login() {
 
       if (data.success) {
         if (mode === 'login') {
-          // Logică reușită pentru Login
           localStorage.setItem('user', JSON.stringify(data.user));
           if (userType === 'client') {
             navigate('/client');
@@ -48,13 +46,11 @@ export default function Login() {
             navigate('/driver');
           }
         } else {
-          // Logică reușită pentru Sign Up
           setSuccessMessage("Cont creat cu succes! Te rugăm să te autentifici.");
-          setMode('login'); // Îl mutăm automat la login
-          setName(''); // Resetăm numele
+          setMode('login');
+          setName('');
         }
       } else {
-        // Mesaj de eroare de la backend (ex: "Email deja înregistrat")
         setError(data.message);
       }
     } catch (err) {
