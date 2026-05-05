@@ -1,11 +1,18 @@
-
-
 /*#############################################################*/
 /* PARTEA 1 - STERGEREA SI RECREAREA BAZEI DE DATE      */
+/*
+-- ALEXANDR;
 
 DROP DATABASE IF EXISTS taxi_service;
 CREATE DATABASE taxi_service;
 USE taxi_service;
+ */
+
+-- LUCA;
+
+DROP DATABASE IF EXISTS taxidb;
+CREATE DATABASE taxidb;
+USE taxidb;
 
 /*#############################################################*/
 
@@ -51,6 +58,8 @@ CREATE TABLE masina (
     model VARCHAR(45),
     categorie VARCHAR(45),
     km_parcursi INT,
+    culoare VARCHAR(45),
+    an_fabricare INT,
     FOREIGN KEY (sofer_id_sofer) REFERENCES sofer(id_sofer) ON DELETE CASCADE
 );
 
@@ -85,6 +94,7 @@ CREATE TABLE cursa (
     id_cursa INT AUTO_INCREMENT PRIMARY KEY,
     client_id_client INT,
     sofer_id_sofer INT,
+    status varchar(45),
     plecare INT,
     destinatie INT,
     data_comanda DATE,
@@ -133,6 +143,7 @@ CREATE TABLE recenzie (
 CREATE TABLE certificat (
     id_certificat INT AUTO_INCREMENT PRIMARY KEY,
     sofer_id_sofer INT,
+    certificat_tip VARCHAR(45),
     certificat_poza MEDIUMBLOB,
     data_exp_certif DATE,
     FOREIGN KEY (sofer_id_sofer) REFERENCES sofer(id_sofer) ON DELETE CASCADE
@@ -204,9 +215,21 @@ INSERT INTO recenzie (sofer_id_sofer, client_id_client, rating, comentarii, tip_
 (1, 3, 5, 'Client la timp, cursa placuta.', 'sofer');
 
 -- 12. Inserare Certificate Soferi
-INSERT INTO certificat (sofer_id_sofer, certificat_poza, data_exp_certif) VALUES
-(1, NULL, '2026-05-20'),
-(2, NULL, '2025-10-15');
+INSERT INTO certificat (sofer_id_sofer, certificat_tip, certificat_poza, data_exp_certif) VALUES
+(1, NULL, NULL, '2026-05-20'),
+(2, NULL, NULL,'2025-10-15');
+
+-- testare LUCA;
+
+INSERT INTO sofer (id_sofer, nume, telefon, mail, parola, status, cnp, activ) VALUES
+    (99,'sofer', '0744123123', 'sofer@site.test', 'sofer', 'offline', '1850202112233', 1);
+INSERT INTO client (id_client,nume, nr_tel, mail, parola, km_parcursi, activ) VALUES
+    (99,'client', 0722000111, 'client@site.test', 'client', 120, 1);
+INSERT INTO cursa (client_id_client, sofer_id_sofer, status, plecare, destinatie,
+                   data_comanda, ora_comanda, durata_estimata, ora_start,
+                   ora_destinatie, pret_estimat, pret_final, distanta) VALUES
+    (99, 99, 'Waiting Driver', 10,45, '2024-04-10', '14:30:00',
+    20, 14, 15, 25.5, 25.5, 7.2);
 
 /*#############################################################*/
 
