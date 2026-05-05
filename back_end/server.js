@@ -332,7 +332,33 @@ app.post('/api/end-ride', (req, res) => {
         });
     });
 });
+// 5. Istoricul curselor pentru Sofer (Ride Finished)
+app.get('/api/driver-history/:id_sofer', (req, res) => {
+    const id = req.params.id_sofer;
+    const query = `
+        SELECT 
+            c.id_cursa as id,
+            c.data_comanda as date,
+            c.ora_comanda as time,
+            cl.nume as passenger,
+            c.plecare as from_loc,
+            c.destinatie as to_loc,
+            c.distanta as distance,
+            c.durata_estimata as duration,
+            c.pret_final as fare,
+            IFNULL(p.tips, 0) as tip
+        FROM cursa c
+        JOIN client cl ON c.client_id_client = cl.id_client
+        LEFT JOIN plata p ON c.id_cursa = p.cursa_id_cursa
+        WHERE c.sofer_id_sofer = ? AND c.status = 'Ride Finished'
+        ORDER BY c.data_comanda DESC, c.ora_comanda DESC
+    `;
 
+    db.query(query, [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
 
 
 
