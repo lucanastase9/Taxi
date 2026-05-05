@@ -1,286 +1,206 @@
-import { useState } from 'react';
-import { Calendar, DollarSign, TrendingUp, Filter, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, DollarSign, TrendingUp, Gift } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DriverHistory() {
-  const [filterPeriod, setFilterPeriod] = useState('week');
-  const [showFilters, setShowFilters] = useState(false);
+  const [trips, setTrips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const trips = [
-    {
-      id: 1,
-      date: '2026-04-12',
-      time: '14:30',
-      passenger: 'Sarah Johnson',
-      from: 'Times Square',
-      to: 'JFK Airport',
-      distance: '16.2 mi',
-      duration: '42 min',
-      fare: 52.00,
-      tip: 8.00,
-      rating: 5,
-      review: 'Great driver!',
-    },
-    {
-      id: 2,
-      date: '2026-04-12',
-      time: '11:15',
-      passenger: 'Michael Chen',
-      from: 'Brooklyn Bridge',
-      to: 'Central Park',
-      distance: '5.3 mi',
-      duration: '18 min',
-      fare: 22.50,
-      tip: 4.50,
-      rating: 5,
-      review: null,
-    },
-    {
-      id: 3,
-      date: '2026-04-11',
-      time: '18:45',
-      passenger: 'Emma Davis',
-      from: 'Grand Central',
-      to: 'LaGuardia Airport',
-      distance: '8.7 mi',
-      duration: '28 min',
-      fare: 38.00,
-      tip: 6.00,
-      rating: 4,
-      review: 'Good service',
-    },
-    {
-      id: 4,
-      date: '2026-04-11',
-      time: '15:20',
-      passenger: 'David Martinez',
-      from: 'Wall Street',
-      to: 'SoHo',
-      distance: '2.1 mi',
-      duration: '12 min',
-      fare: 14.00,
-      tip: 2.00,
-      rating: 5,
-      review: null,
-    },
-    {
-      id: 5,
-      date: '2026-04-10',
-      time: '09:00',
-      passenger: 'Lisa Anderson',
-      from: 'Penn Station',
-      to: 'Newark Airport',
-      distance: '14.5 mi',
-      duration: '35 min',
-      fare: 48.00,
-      tip: 10.00,
-      rating: 5,
-      review: 'Very professional',
-    },
-  ];
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
-  const weeklyEarnings = [
-    { day: 'Mon', amount: 145 },
-    { day: 'Tue', amount: 182 },
-    { day: 'Wed', amount: 156 },
-    { day: 'Thu', amount: 198 },
-    { day: 'Fri', amount: 234 },
-    { day: 'Sat', amount: 287 },
-    { day: 'Sun', amount: 165 },
-  ];
+  const fetchHistory = async () => {
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const driverId = savedUser.id_sofer || savedUser.id;
 
-  const totalEarnings = trips.reduce((sum, trip) => sum + trip.fare + trip.tip, 0);
+      if (!driverId) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5050/api/driver-history/${driverId}`, {
+        cache: 'no-store'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTrips(data);
+      }
+    } catch (err) {
+      console.error("Error fetching trip history:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- CALCULE DINAMICE BAZATE PE BAZA DE DATE ---
+  const totalEarnings = trips.reduce((sum, trip) => sum + (Number(trip.fare) || 0) + (Number(trip.tip) || 0), 0);
+  const totalTips = trips.reduce((sum, trip) => sum + (Number(trip.tip) || 0), 0);
   const totalTrips = trips.length;
-  const avgEarningsPerTrip = totalEarnings / totalTrips;
-  const totalDistance = trips.reduce((sum, trip) => sum + parseFloat(trip.distance), 0);
+  const avgEarningsPerTrip = totalTrips > 0 ? totalEarnings / totalTrips : 0;
+  const totalDistance = trips.reduce((sum, trip) => sum + (Number(trip.distance) || 0), 0);
+
+  // --- GENERARE GRAFIC (Grupat pe zilele săptămânii) ---
+  const generateChartData = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const chartData = [
+      { day: 'Mon', amount: 0 }, { day: 'Tue', amount: 0 }, { day: 'Wed', amount: 0 },
+      { day: 'Thu', amount: 0 }, { day: 'Fri', amount: 0 }, { day: 'Sat', amount: 0 },
+      { day: 'Sun', amount: 0 }
+    ];
+
+    trips.forEach(trip => {
+      if (trip.date) {
+        const dateObj = new Date(trip.date);
+        const dayName = days[dateObj.getDay()];
+        const earnings = (Number(trip.fare) || 0) + (Number(trip.tip) || 0);
+
+        const dayEntry = chartData.find(d => d.day === dayName);
+        if (dayEntry) {
+          dayEntry.amount += earnings;
+        }
+      }
+    });
+    return chartData;
+  };
+
+  const weeklyEarnings = generateChartData();
+
+  if (loading) return <div className="p-8 text-center text-primary font-bold text-lg">Loading history...</div>;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <h1>Trip History</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors flex items-center gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-          </button>
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="bg-card rounded-lg p-6 border border-border mb-8">
-          <h3 className="mb-4">Filter Options</h3>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setFilterPeriod('week')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filterPeriod === 'week'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
-              }`}
-            >
-              This Week
-            </button>
-            <button
-              onClick={() => setFilterPeriod('month')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filterPeriod === 'month'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
-              }`}
-            >
-              This Month
-            </button>
-            <button
-              onClick={() => setFilterPeriod('year')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filterPeriod === 'year'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
-              }`}
-            >
-              This Year
-            </button>
-            <button
-              onClick={() => setFilterPeriod('custom')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                filterPeriod === 'custom'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted hover:bg-muted/80'
-              }`}
-            >
-              Custom Range
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="grid md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-card rounded-lg p-6 border border-border">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <DollarSign className="w-4 h-4" />
-            <span className="text-sm">Total Earnings</span>
-          </div>
-          <div className="text-3xl mb-1">${totalEarnings.toFixed(2)}</div>
-          <div className="flex items-center gap-1 text-sm text-accent">
-            <TrendingUp className="w-4 h-4" />
-            <span>+12.5% from last week</span>
-          </div>
+      <div className="p-8 max-w-6xl mx-auto pb-24">
+        {/* AM ELIMINAT BUTONUL ȘI STAREA DE FILTRE CONFORM CERINȚEI */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Trip History</h1>
         </div>
 
-        <div className="bg-card rounded-lg p-6 border border-border">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <Calendar className="w-4 h-4" />
-            <span className="text-sm">Total Trips</span>
-          </div>
-          <div className="text-3xl mb-1">{totalTrips}</div>
-          <div className="text-sm text-muted-foreground">
-            {totalDistance.toFixed(1)} miles driven
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg p-6 border border-border">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <DollarSign className="w-4 h-4" />
-            <span className="text-sm">Avg per Trip</span>
-          </div>
-          <div className="text-3xl mb-1">${avgEarningsPerTrip.toFixed(2)}</div>
-          <div className="text-sm text-muted-foreground">
-            Including tips
-          </div>
-        </div>
-
-        <div className="bg-card rounded-lg p-6 border border-border">
-          <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-            <Star className="w-4 h-4" />
-            <span className="text-sm">Avg Rating</span>
-          </div>
-          <div className="text-3xl mb-1">
-            {(trips.reduce((sum, t) => sum + t.rating, 0) / trips.length).toFixed(1)}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            From {totalTrips} trips
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-card rounded-lg p-6 border border-border mb-8">
-        <h3 className="mb-6">Weekly Earnings</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={weeklyEarnings}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(26, 40, 71, 0.1)" />
-            <XAxis dataKey="day" stroke="#5a6b8c" tick={{ fill: '#5a6b8c' }} />
-            <YAxis stroke="#5a6b8c" tick={{ fill: '#5a6b8c' }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#FEFDFB',
-                border: '1px solid rgba(26, 40, 71, 0.15)',
-                borderRadius: '8px',
-              }}
-            />
-            <Bar dataKey="amount" fill="#D4A574" radius={[8, 8, 0, 0]} isAnimationActive={false} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="bg-card rounded-lg p-6 border border-border mb-8">
-        <h3 className="mb-6">Trip Details</h3>
-        <div className="space-y-4">
-          {trips.map((trip) => (
-            <div key={trip.id} className="pb-4 border-b border-border last:border-0 last:pb-0">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="mb-2">{trip.passenger}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {trip.date} • {trip.time}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xl mb-1">${(trip.fare + trip.tip).toFixed(2)}</div>
-                  <div className="flex items-center gap-1 justify-end">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={`trip-${trip.id}-star-${i}`}
-                        className={`w-4 h-4 ${
-                          i < trip.rating ? 'fill-accent text-accent' : 'text-muted'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Route:</span>
-                  <span className="ml-2">{trip.from} → {trip.to}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Distance:</span>
-                  <span className="ml-2">{trip.distance}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Fare:</span>
-                  <span className="ml-2">${trip.fare.toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Tip:</span>
-                  <span className="ml-2 text-accent">${trip.tip.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {trip.review && (
-                <div className="mt-3 p-3 bg-muted rounded-lg text-sm">
-                  <span className="text-muted-foreground">Review: </span>
-                  {trip.review}
-                </div>
-              )}
+        {/* CARDURI DE STATISTICI */}
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-card rounded-lg p-6 border border-border shadow-sm">
+            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+              <DollarSign className="w-4 h-4" />
+              <span className="text-sm font-semibold uppercase tracking-wide">Total Earnings</span>
             </div>
-          ))}
+            <div className="text-3xl font-light text-primary mb-1">${totalEarnings.toFixed(2)}</div>
+            <div className="flex items-center gap-1 text-sm text-green-600 font-medium">
+              <TrendingUp className="w-4 h-4" />
+              <span>All completed trips</span>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-lg p-6 border border-border shadow-sm">
+            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+              <Calendar className="w-4 h-4" />
+              <span className="text-sm font-semibold uppercase tracking-wide">Total Trips</span>
+            </div>
+            <div className="text-3xl font-light text-primary mb-1">{totalTrips}</div>
+            <div className="text-sm text-muted-foreground font-medium">
+              {totalDistance.toFixed(1)} km driven
+            </div>
+          </div>
+
+          <div className="bg-card rounded-lg p-6 border border-border shadow-sm">
+            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+              <DollarSign className="w-4 h-4" />
+              <span className="text-sm font-semibold uppercase tracking-wide">Avg per Trip</span>
+            </div>
+            <div className="text-3xl font-light text-primary mb-1">${avgEarningsPerTrip.toFixed(2)}</div>
+            <div className="text-sm text-muted-foreground font-medium">
+              Including tips
+            </div>
+          </div>
+
+          <div className="bg-card rounded-lg p-6 border border-border shadow-sm">
+            <div className="flex items-center gap-2 mb-2 text-muted-foreground">
+              <Gift className="w-4 h-4 text-accent" />
+              <span className="text-sm font-semibold uppercase tracking-wide">Total Tips</span>
+            </div>
+            <div className="text-3xl font-light text-primary mb-1">${totalTips.toFixed(2)}</div>
+            <div className="text-sm text-muted-foreground font-medium">
+              Received from clients
+            </div>
+          </div>
+        </div>
+
+        {/* GRAFIC SĂPTĂMÂNAL (Calculat dinamic) */}
+        <div className="bg-card rounded-lg p-8 border border-border mb-8 shadow-sm">
+          <h3 className="mb-6 text-xl font-bold">Weekly Earnings</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={weeklyEarnings}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(26, 40, 71, 0.1)" vertical={false} />
+              <XAxis dataKey="day" stroke="#5a6b8c" tick={{ fill: '#5a6b8c', fontWeight: 500 }} axisLine={false} tickLine={false} />
+              <YAxis stroke="#5a6b8c" tick={{ fill: '#5a6b8c' }} axisLine={false} tickLine={false} tickFormatter={(value) => `$${value}`} />
+              <Tooltip
+                  cursor={{ fill: 'rgba(212, 165, 116, 0.1)' }}
+                  contentStyle={{
+                    backgroundColor: '#FEFDFB',
+                    border: '1px solid rgba(26, 40, 71, 0.15)',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    color: '#1A2847'
+                  }}
+                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Earnings']}
+              />
+              <Bar dataKey="amount" fill="#D4A574" radius={[6, 6, 0, 0]} isAnimationActive={true} barSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* LISTA CURSELOR DINAMICĂ */}
+        <div className="bg-card rounded-lg p-8 border border-border shadow-sm">
+          <h3 className="mb-6 text-xl font-bold">Trip Details</h3>
+
+          {trips.length === 0 ? (
+              <p className="text-muted-foreground italic text-center py-8">Nu ai nicio cursă finalizată încă.</p>
+          ) : (
+              <div className="space-y-6">
+                {trips.map((trip) => {
+                  const tripDate = new Date(trip.date).toLocaleDateString();
+                  const totalAmount = (Number(trip.fare) || 0) + (Number(trip.tip) || 0);
+
+                  return (
+                      <div key={trip.id} className="pb-6 border-b border-border last:border-0 last:pb-0">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-lg text-primary font-bold">
+                              {trip.passenger ? trip.passenger[0].toUpperCase() : 'C'}
+                            </div>
+                            <div>
+                              <div className="mb-1 font-bold text-lg text-foreground">{trip.passenger}</div>
+                              <div className="text-sm font-medium text-muted-foreground">
+                                {tripDate} • {trip.time}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-light text-primary">${totalAmount.toFixed(2)}</div>
+                            <span className="text-xs font-bold uppercase tracking-widest text-green-600 bg-green-100 px-3 py-1 rounded-full">Completed</span>
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-4 gap-4 text-sm bg-muted/40 p-4 rounded-lg">
+                          <div className="md:col-span-2">
+                            <span className="text-muted-foreground font-semibold uppercase text-xs tracking-wider">Route:</span>
+                            <span className="ml-2 font-medium">Zona {trip.from_zone} → Zona {trip.to_zone}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground font-semibold uppercase text-xs tracking-wider">Distance:</span>
+                            <span className="ml-2 font-medium">{trip.distance} km</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-muted-foreground font-semibold uppercase text-xs tracking-wider">Fare + Tip:</span>
+                            <span className="ml-2 font-medium">${Number(trip.fare).toFixed(2)} + <span className="text-accent">${Number(trip.tip).toFixed(2)}</span></span>
+                          </div>
+                        </div>
+                      </div>
+                  );
+                })}
+              </div>
+          )}
         </div>
       </div>
-    </div>
   );
 }
