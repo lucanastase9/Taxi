@@ -95,8 +95,8 @@ CREATE TABLE cursa (
     client_id_client INT,
     sofer_id_sofer INT,
     status varchar(45),
-    plecare INT,
-    destinatie INT,
+    plecare VARCHAR(255),
+    destinatie VARCHAR(255),
     data_comanda DATE,
     ora_comanda TIME,
     durata_estimata INT,
@@ -105,6 +105,7 @@ CREATE TABLE cursa (
     pret_estimat FLOAT,
     pret_final FLOAT,
     distanta FLOAT,
+    categorie VARCHAR(45),
     FOREIGN KEY (client_id_client) REFERENCES client(id_client),
     FOREIGN KEY (sofer_id_sofer) REFERENCES sofer(id_sofer)
 );
@@ -225,10 +226,10 @@ INSERT INTO sofer (id_sofer, nume, telefon, mail, parola, status, cnp, activ) VA
     (99,'sofer', '0744123123', 'sofer@site.test', 'sofer', 'offline', '1850202112233', 1);
 INSERT INTO client (id_client,nume, nr_tel, mail, parola, km_parcursi, activ) VALUES
     (99,'client', 0722000111, 'client@site.test', 'client', 120, 1);
-INSERT INTO cursa (client_id_client, sofer_id_sofer, status, plecare, destinatie,
+INSERT INTO cursa (client_id_client, status, plecare, destinatie,
                    data_comanda, ora_comanda, durata_estimata, ora_start,
                    ora_destinatie, pret_estimat, pret_final, distanta) VALUES
-    (99, 99, 'Waiting Driver', 10,45, '2024-04-10', '14:30:00',
+    (99, 'Waiting Driver', 10,45, '2024-04-10', '14:30:00',
     20, 14, 15, 25.5, 25.5, 7.2);
 
 /*#############################################################*/

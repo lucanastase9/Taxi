@@ -371,7 +371,7 @@ export default function DriverAccount() {
           <div className="bg-card rounded-lg p-6 border border-border shadow-sm flex flex-col justify-center">
             {/* Afișăm suma formatată ca monedă (LEI sau USD) */}
             <div className="text-4xl text-primary font-light mb-1">
-              ${driver.totalEarnings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              {driver.totalEarnings.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} lei
             </div>
             <div className="text-sm text-muted-foreground font-medium">Total Earnings</div>
           </div>

@@ -84,7 +84,7 @@ export default function DriverHistory() {
               <DollarSign className="w-4 h-4" />
               <span className="text-sm font-semibold uppercase tracking-wide">Total Earnings</span>
             </div>
-            <div className="text-3xl font-light text-primary mb-1">${totalEarnings.toFixed(2)}</div>
+            <div className="text-3xl font-light text-primary mb-1">{totalEarnings.toFixed(2)} lei</div>
             <div className="flex items-center gap-1 text-sm text-green-600 font-medium">
               <TrendingUp className="w-4 h-4" />
               <span>All completed trips</span>
@@ -107,7 +107,7 @@ export default function DriverHistory() {
               <DollarSign className="w-4 h-4" />
               <span className="text-sm font-semibold uppercase tracking-wide">Avg per Trip</span>
             </div>
-            <div className="text-3xl font-light text-primary mb-1">${avgEarningsPerTrip.toFixed(2)}</div>
+            <div className="text-3xl font-light text-primary mb-1">{avgEarningsPerTrip.toFixed(2)} lei</div>
             <div className="text-sm text-muted-foreground font-medium">
               Including tips
             </div>
@@ -118,7 +118,7 @@ export default function DriverHistory() {
               <Gift className="w-4 h-4 text-accent" />
               <span className="text-sm font-semibold uppercase tracking-wide">Total Tips</span>
             </div>
-            <div className="text-3xl font-light text-primary mb-1">${totalTips.toFixed(2)}</div>
+            <div className="text-3xl font-light text-primary mb-1">{totalTips.toFixed(2)} lei</div>
             <div className="text-sm text-muted-foreground font-medium">
               Received from clients
             </div>
@@ -132,7 +132,7 @@ export default function DriverHistory() {
             <BarChart data={weeklyEarnings}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(26, 40, 71, 0.1)" vertical={false} />
               <XAxis dataKey="day" stroke="#5a6b8c" tick={{ fill: '#5a6b8c', fontWeight: 500 }} axisLine={false} tickLine={false} />
-              <YAxis stroke="#5a6b8c" tick={{ fill: '#5a6b8c' }} axisLine={false} tickLine={false} tickFormatter={(value) => `$${value}`} />
+              <YAxis stroke="#5a6b8c" tick={{ fill: '#5a6b8c' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${value} lei`} />
               <Tooltip
                   cursor={{ fill: 'rgba(212, 165, 116, 0.1)' }}
                   contentStyle={{
@@ -142,7 +142,7 @@ export default function DriverHistory() {
                     fontWeight: 'bold',
                     color: '#1A2847'
                   }}
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Earnings']}
+                  formatter={(value: number) => [`${value.toFixed(2)} lei`, 'Earnings']}
               />
               <Bar dataKey="amount" fill="#D4A574" radius={[6, 6, 0, 0]} isAnimationActive={true} barSize={40} />
             </BarChart>
@@ -176,7 +176,7 @@ export default function DriverHistory() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-light text-primary">${totalAmount.toFixed(2)}</div>
+                            <div className="text-2xl font-light text-primary">{totalAmount.toFixed(2)} lei</div>
                             <span className="text-xs font-bold uppercase tracking-widest text-green-600 bg-green-100 px-3 py-1 rounded-full">Completed</span>
                           </div>
                         </div>
@@ -192,7 +192,7 @@ export default function DriverHistory() {
                           </div>
                           <div className="text-right">
                             <span className="text-muted-foreground font-semibold uppercase text-xs tracking-wider">Fare + Tip:</span>
-                            <span className="ml-2 font-medium">${Number(trip.fare).toFixed(2)} + <span className="text-accent">${Number(trip.tip).toFixed(2)}</span></span>
+                            <span className="ml-2 font-medium">{Number(trip.fare).toFixed(2)} lei + <span className="text-accent">{Number(trip.tip).toFixed(2)} lei</span></span>
                           </div>
                         </div>
                       </div>

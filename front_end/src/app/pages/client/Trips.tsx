@@ -98,7 +98,7 @@ export default function ClientTrips() {
                 </div>
 
                 <div className="text-right">
-                  <div className="text-2xl mb-1">${trip.price.toFixed(2)}</div>
+                  <div className="text-2xl mb-1">${trip.price.toFixed(2)} lei</div>
                   <div className="text-sm text-muted-foreground mb-2">
                     {trip.distance} • {trip.duration}
                   </div>

@@ -268,14 +268,17 @@ app.post('/api/logout', (req, res) => {
 // rute pentru sofer - curssa
 // 1. Obține cursele disponibile (status: 'Waiting Driver')
 app.get('/api/available-rides', (req, res) => {
+    const categorieSofer = req.query.categorie; // Primim categoria din Frontend
+
     const query = `
         SELECT c.*, cl.nume as passengerName 
         FROM cursa c 
         JOIN client cl ON c.client_id_client = cl.id_client 
-        WHERE c.status = 'Waiting Driver'
+        WHERE c.status = 'Asteptare Sofer' AND c.categorie = ?
         ORDER BY c.data_comanda DESC, c.ora_comanda DESC
     `;
-    db.query(query, (err, results) => {
+
+    db.query(query, [categorieSofer], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(results);
     });
@@ -298,37 +301,53 @@ app.get('/api/active-ride/:id_sofer', (req, res) => {
     });
 });
 
-// 3. Șoferul ACCEPTĂ o cursă
+// 3. ruta ca soferul sa accepte calatoria
 app.post('/api/accept-ride', (req, res) => {
-    const { id_cursa, id_sofer } = req.body
-    // Pas A: Actualizăm statusul cursei și atribuim șoferul
-    const updateCursa = "UPDATE cursa SET status = 'In ride', sofer_id_sofer = ? WHERE id_cursa = ?";
+    const { id_cursa, id_sofer } = req.body;
+    const oraStart = new Date().getHours();
 
-    db.query(updateCursa, [id_sofer, id_cursa], (err) => {
+    const updateCursa = "UPDATE cursa SET status = 'In ride', sofer_id_sofer = ?, ora_start = ? WHERE id_cursa = ?";
+
+    db.query(updateCursa, [id_sofer, oraStart, id_cursa], (err) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
-        // Pas B: Actualizăm statusul șoferului la 'in_ride'
+
         const updateSofer = "UPDATE sofer SET status = 'in_ride' WHERE id_sofer = ?";
         db.query(updateSofer, [id_sofer], (errSofer) => {
             if (errSofer) console.error("Eroare update status sofer:", errSofer);
-            res.json({ success: true, message: "Cursă preluată cu succes!" });
+            res.json({ success: true, message: "Cursă preluată cu succes!", ora_start: oraStart });
         });
     });
 });
-// 4. Șoferul TERMINĂ o cursă
+// 4. ruta de terminare a calatoriei
 app.post('/api/end-ride', (req, res) => {
     const { id_cursa, id_sofer } = req.body;
+    const oraDestinatie = new Date().getHours();
+    const randomExtra = Math.floor(Math.random() * 51);
 
-    // Pas A: Actualizăm statusul cursei
-    const updateCursa = "UPDATE cursa SET status = 'Ride Finished' WHERE id_cursa = ?";
+    const getPriceQuery = "SELECT pret_estimat FROM cursa WHERE id_cursa = ?";
 
-    db.query(updateCursa, [id_cursa], (err) => {
+    db.query(getPriceQuery, [id_cursa], (err, results) => {
         if (err) return res.status(500).json({ success: false, message: err.message });
+        if (results.length === 0) return res.status(404).json({ success: false, message: "Cursa nu a fost găsită" });
 
-        // Pas B: Readucem șoferul la statusul 'online'
-        const updateSofer = "UPDATE sofer SET status = 'online' WHERE id_sofer = ?";
-        db.query(updateSofer, [id_sofer], (errSofer) => {
-            if (errSofer) console.error("Eroare update status sofer:", errSofer);
-            res.json({ success: true, message: "Cursă finalizată!" });
+        const pretEstimat = results[0].pret_estimat;
+        const pretFinal = pretEstimat + randomExtra;
+
+        const updateCursa = "UPDATE cursa SET status = 'Ride Finished', ora_destinatie = ?, pret_final = ? WHERE id_cursa = ?";
+
+        db.query(updateCursa, [oraDestinatie, pretFinal, id_cursa], (err) => {
+            if (err) return res.status(500).json({ success: false, message: err.message });
+
+            const updateSofer = "UPDATE sofer SET status = 'online' WHERE id_sofer = ?";
+            db.query(updateSofer, [id_sofer], (errSofer) => {
+                if (errSofer) console.error("Eroare update status sofer:", errSofer);
+                res.json({
+                    success: true,
+                    message: "Cursă finalizată!",
+                    pret_final: pretFinal,
+                    bonus_random: randomExtra
+                });
+            });
         });
     });
 });
@@ -380,4 +399,33 @@ app.put('/api/update-profile', (req, res) => {
 const PORT = 5050;
 app.listen(PORT, () => {
     console.log(`🚀 Serverul de backend rulează pe http://localhost:${PORT}`);
+});
+
+// ruta de creeare cursa client
+app.post('/api/create-ride', (req, res) => {
+    const { client_id_client, plecare, destinatie, distanta, categorie } = req.body;
+
+    // Definim tarifele pe km
+    const tarife = {
+        'economy': 2.40,
+        'standard': 2.90,
+        'premium': 3.50,
+        'xl': 4.50
+    };
+
+    const pret_estimat = parseFloat(distanta) * (tarife[categorie.toLowerCase()] || 2.90);
+    const status = 'Asteptare Sofer';
+    const data_comanda = new Date().toISOString().split('T')[0];
+    const ora_comanda = new Date().toLocaleTimeString('ro-RO', { hour12: false });
+
+    const query = `
+        INSERT INTO cursa 
+        (client_id_client, status, plecare, destinatie, categorie, data_comanda, ora_comanda, pret_estimat, distanta) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(query, [client_id_client, status, plecare, destinatie, categorie, data_comanda, ora_comanda, pret_estimat, distanta], (err, result) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, pret: pret_estimat, id_cursa: result.insertId });
+    });
 });

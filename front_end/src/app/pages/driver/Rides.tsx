@@ -33,7 +33,13 @@ export default function DriverRides() {
 
   const fetchAvailableRides = async () => {
     try {
-      const response = await fetch('http://localhost:5050/api/available-rides', { cache: 'no-store' });
+      const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const categorieSofer = savedUser.categorie;
+
+      const response = await fetch(`http://localhost:5050/api/available-rides?categorie=${categorieSofer}`, {
+        cache: 'no-store'
+      });
+
       if (response.ok) {
         const data = await response.json();
         setAvailableRides(data);
@@ -124,7 +130,7 @@ export default function DriverRides() {
                   <p className="text-muted-foreground">You are currently in a ride with <span className="font-bold text-foreground">{activeRide.passengerName}</span>.</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-light text-primary">${activeRide.pret_estimat?.toFixed(2) || '0.00'}</div>
+                  <div className="text-3xl font-light text-primary">{activeRide.pret_estimat?.toFixed(2) || '0.00'} lei</div>
                   <div className="text-sm text-muted-foreground font-medium">Estimated Fare</div>
                 </div>
               </div>
@@ -205,7 +211,7 @@ export default function DriverRides() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-2xl font-light text-primary mb-1">${ride.pret_estimat?.toFixed(2) || '0.00'}</div>
+                            <div className="text-2xl font-light text-primary mb-1">{ride.pret_estimat?.toFixed(2) || '0.00'} lei</div>
                             <div className="text-sm font-semibold text-muted-foreground uppercase">{ride.durata_estimata || 0} Min Est.</div>
                           </div>
                         </div>
