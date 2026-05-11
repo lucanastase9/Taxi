@@ -7,31 +7,40 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 /*
-ALEXANDRA
+LUCA
 // Configurare conexiune baza de date pentru DBngin
 const db = mysql.createConnection({
-    host: '127.0.0.1', // Pe Mac mereu folosim IP-ul, nu cuvântul 'localhost'
-    user: 'root',      // Utilizatorul standard DBngin
-    password: '',      // LĂSĂM GOL! DBngin nu pune nicio parolă din fabrică.
-    database: 'taxi_service',
-    port: 5500         // Portul exact pe care ți l-a alocat DBngin și pe care îl vede DataGrip
+    host: 'localhost', 
+    user: 'root',      
+    password: '',      
+    database: 'taxidb',
+    port: 3306         
 });
  */
-// 1. Configurare conexiune baza de date
-const db = mysql.createConnection({
-    host: 'localhost',
+// Alexandra
+/*const db = mysql.createConnection({
+    host: '127.0.0.1',
     user: 'root',
     password: '',
-    database: 'taxidb',
+    database: 'taxi_service',
     port: 3306
+});*/
+//Aiven.io
+const db = mysql.createConnection({
+    host: 'taxidb-bordeialexandraioana-taxiservice.j.aivencloud.com', // NU mai e localhost
+    user: 'avnadmin',
+    password: 'AVNS_fZOrsnR2EPkWWa1tnG0',
+    database: 'defaultdb',
+    port: 11584
 });
+
 
 db.connect((err) => {
     if (err) {
         console.error('❌ Eroare conexiune MySQL:', err.message);
         return;
     }
-    console.log('✅ Conectat cu succes la baza de date pe portul 3306!');
+    console.log('✅ Conectat cu succes la baza de date din cloud');
 });
 
 // --- RUTE API GENERALE ---
@@ -397,6 +406,221 @@ app.put('/api/update-profile', (req, res) => {
 });
 
 const PORT = 5050;
+// ==========================================
+// RUTE ADMIN - GESTIONARE CLIENTI (CRUD)
+// ==========================================
+
+// 1. VIZUALIZARE (Read)
+app.get('/api/admin/clients', (req, res) => {
+    // Folosim CAST pentru a transforma BIT(1) într-un număr lizibil pentru Frontend
+    const query = 'SELECT id_client, nume, nr_tel, mail, parola, km_parcursi, adresa, CAST(activ AS UNSIGNED) as activ FROM client ORDER BY id_client DESC';
+    
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error("Eroare la citire clienți:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(results);
+    });
+});
+
+// 2. ADĂUGARE (Create)
+app.post('/api/admin/clients', (req, res) => {
+    const { nume, nr_tel, mail, parola } = req.body;
+    // Setăm activ=1 implicit la creare
+    const query = 'INSERT INTO client (nume, nr_tel, mail, parola, km_parcursi, activ) VALUES (?, ?, ?, ?, 0, 1)';
+    
+    db.query(query, [nume, nr_tel, mail, parola], (err, result) => {
+        if (err) {
+            console.error("Eroare la adăugare client:", err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Client adăugat cu succes!" });
+    });
+});
+
+// 3. MODIFICARE (Update)
+app.put('/api/admin/clients/:id', (req, res) => {
+    const id = req.params.id;
+    const { nume, nr_tel, mail } = req.body;
+    
+    const query = 'UPDATE client SET nume = ?, nr_tel = ?, mail = ? WHERE id_client = ?';
+    db.query(query, [nume, nr_tel, mail, id], (err, result) => {
+        if (err) {
+            console.error("Eroare la editare client:", err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Datele clientului au fost actualizate!" });
+    });
+});
+
+// 4. ȘTERGERE LOGICĂ (Delete)
+app.delete('/api/admin/clients/:id', (req, res) => {
+    const id = req.params.id;
+    // Setăm activ = 0
+    const query = 'UPDATE client SET activ = 0 WHERE id_client = ?';
+    
+    db.query(query, [id], (err, result) => {
+        if (err) {
+            console.error("Eroare la arhivare client:", err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Contul clientului a fost arhivat!" });
+    });
+});
+
+
+// ==========================================
+// RUTE ADMIN - GESTIONARE ȘOFERI (CRUD)
+// ==========================================
+
+// 1. VIZUALIZARE (Read)
+app.get('/api/admin/drivers', (req, res) => {
+    const query = 'SELECT id_sofer, nume, telefon, mail, parola, status, cnp, CAST(activ AS UNSIGNED) as activ FROM sofer ORDER BY id_sofer DESC';
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error("Eroare la citire șoferi:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(results);
+    });
+});
+
+// 2. ADĂUGARE (Create)
+app.post('/api/admin/drivers', (req, res) => {
+    const { nume, telefon, mail, parola, cnp } = req.body;
+    // Setăm status 'offline' implicit și activ=1
+    const query = 'INSERT INTO sofer (nume, telefon, mail, parola, status, cnp, activ) VALUES (?, ?, ?, ?, "offline", ?, 1)';
+    
+    db.query(query, [nume, telefon, mail, parola, cnp], (err, result) => {
+        if (err) {
+            console.error("Eroare la adăugare șofer:", err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Șofer adăugat cu succes!" });
+    });
+});
+
+// 3. MODIFICARE (Update)
+app.put('/api/admin/drivers/:id', (req, res) => {
+    const id = req.params.id;
+    const { nume, telefon, mail, cnp } = req.body;
+    
+    const query = 'UPDATE sofer SET nume = ?, telefon = ?, mail = ?, cnp = ? WHERE id_sofer = ?';
+    db.query(query, [nume, telefon, mail, cnp, id], (err, result) => {
+        if (err) {
+            console.error("Eroare la editare șofer:", err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Datele șoferului au fost actualizate!" });
+    });
+});
+
+// 4. ȘTERGERE LOGICĂ (Delete)
+app.delete('/api/admin/drivers/:id', (req, res) => {
+    const id = req.params.id;
+    const query = 'UPDATE sofer SET activ = 0 WHERE id_sofer = ?';
+    
+    db.query(query, [id], (err, result) => {
+        if (err) {
+            console.error("Eroare la arhivare șofer:", err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Șoferul a fost dezactivat!" });
+    });
+});
+// 5. REACTIVARE ȘOFER (Update activ = 1)
+app.put('/api/admin/drivers/:id/activate', (req, res) => {
+    const id = req.params.id;
+    const query = 'UPDATE sofer SET activ = 1 WHERE id_sofer = ?';
+    
+    db.query(query, [id], (err, result) => {
+        if (err) {
+            console.error("Eroare la reactivare șofer:", err);
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Șoferul a fost reactivat!" });
+    });
+});
+
+// ==========================================
+// RUTĂ AUTENTIFICARE ADMIN
+// ==========================================
+app.post('/api/admin/login', (req, res) => {
+    const { parola } = req.body;
+    
+    // Setează aici parola pe care o dorești pentru panoul de admin
+    const PAROLA_ADMIN = "admin123";
+
+    if (parola === PAROLA_ADMIN) {
+        res.json({ success: true, message: "Autentificare reușită!" });
+    } else {
+        res.status(401).json({ success: false, message: "Parolă incorectă!" });
+    }
+});
+
+// RUTĂ ADMIN - DASHBOARD STATISTICI
+app.get('/api/admin/dashboard-stats', (req, res) => {
+    const query = `
+        SELECT 
+            (SELECT COUNT(*) FROM client WHERE activ = 1) AS total_clienti,
+            (SELECT COUNT(*) FROM sofer WHERE activ = 1) AS total_soferi,
+            (SELECT COUNT(*) FROM cursa) AS total_curse,
+            (SELECT IFNULL(SUM(pret_final), 0) FROM cursa WHERE pret_final IS NOT NULL) AS venit_total
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error("Eroare la statistici dashboard:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(results[0]); // Returnăm primul rând (singurul)
+    });
+});
+
+
+// ==========================================
+// RUTE ADMIN - GESTIONARE DISCOUNTURI (Relație N:M)
+// ==========================================
+
+// 1. VIZUALIZARE (Aducem toate discounturile)
+app.get('/api/admin/discounts', (req, res) => {
+    const query = 'SELECT * FROM discount ORDER BY id_discount DESC';
+    db.query(query, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// 2. CREARE DISCOUNT NOU
+app.post('/api/admin/discounts', (req, res) => {
+    const { cod_discount, valoare, data_expirare, tip_valoare } = req.body;
+    const query = 'INSERT INTO discount (cod_discount, valoare, data_expirare, tip_valoare) VALUES (?, ?, ?, ?)';
+    
+    db.query(query, [cod_discount, valoare, data_expirare, tip_valoare], (err, result) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, message: "Discount creat cu succes!" });
+    });
+});
+
+// 3. MAGIA N:M - ALOCĂ UN DISCOUNT UNUI CLIENT
+app.post('/api/admin/assign-discount', (req, res) => {
+    const { client_id_client, discount_id_discount } = req.body;
+    const query = 'INSERT INTO client_has_discount (client_id_client, discount_id_discount) VALUES (?, ?)';
+    
+    db.query(query, [client_id_client, discount_id_discount], (err, result) => {
+        if (err) {
+            // Eroare 1062 înseamnă Duplicate Entry (clientul are deja acest discount)
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ success: false, message: "Clientul are deja acest discount!" });
+            }
+            return res.status(500).json({ success: false, message: err.message });
+        }
+        res.json({ success: true, message: "Discount alocat clientului cu succes!" });
+    });
+});
+
+
 app.listen(PORT, () => {
     console.log(`🚀 Serverul de backend rulează pe http://localhost:${PORT}`);
 });

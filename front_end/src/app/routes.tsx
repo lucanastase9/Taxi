@@ -9,8 +9,40 @@ import ClientReviews from "./pages/client/Reviews";
 import DriverAccount from "./pages/driver/Account";
 import DriverRides from "./pages/driver/Rides";
 import DriverHistory from "./pages/driver/History";
+import AdminLayout from "./AdminLayout";
+import AdminClients from "./pages/admin/AdminClients";
+import AdminDrivers from './pages/admin/AdminDrivers';
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminDiscounts from "./pages/admin/AdminDiscounts";
 
 export const router = createBrowserRouter([
+  {
+    path: '/admin/login',
+    element: <AdminLogin />
+  },
+  {
+    path: '/admin',
+    element: <AdminLayout />,
+    children: [
+      {
+        index: true,
+        element: <AdminDashboard />
+      },
+      {
+        path: 'clients',
+        element: <AdminClients />
+      },
+      {
+        path: 'drivers',
+        element: <AdminDrivers />
+      },
+      {
+        path: 'discounts',
+        element: <AdminDiscounts />
+      }
+    ]
+  },
   {
     path: "/",
     Component: Login,
