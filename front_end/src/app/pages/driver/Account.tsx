@@ -452,6 +452,7 @@ export default function DriverAccount() {
                       value={editData.categorie}
                       onChange={(e) => setEditData({ ...editData, categorie: e.target.value })}
                   >
+                    <option value="Economy">Economy</option>
                     <option value="Standard">Standard</option>
                     <option value="Premium">Premium</option>
                     <option value="XL">XL</option>

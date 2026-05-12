@@ -99,13 +99,13 @@ CREATE TABLE cursa (
     destinatie VARCHAR(255),
     data_comanda DATE,
     ora_comanda TIME,
-    durata_estimata INT,
-    ora_start INT,
-    ora_destinatie INT,
+    ora_start TIME,
+    ora_destinatie TIME,
     pret_estimat FLOAT,
     pret_final FLOAT,
     distanta FLOAT,
     categorie VARCHAR(45),
+    tips FLOAT DEFAULT 0,
     FOREIGN KEY (client_id_client) REFERENCES client(id_client),
     FOREIGN KEY (sofer_id_sofer) REFERENCES sofer(id_sofer)
 );
@@ -155,70 +155,6 @@ CREATE TABLE certificat (
 
 /*#############################################################*/
 /* PARTEA 3 - INSERAREA INREGISTRARILOR IN TABELE (Manuala)   */
-
--- 1. Inserare Angajati Administrativ
-INSERT INTO administrativ (cnp_angajat, nume_prenume, functie, email, nr_tel, salariu, data_angajare, bonusuri) VALUES
-('1900101123456', 'Popa Andrei', 'Manager', 'andrei.popa@taxi.ro', '0722111222', 5000, '2023-01-15 09:00:00', '10%'),
-('2950505987654', 'Radu Maria', 'Contabil', 'maria.radu@taxi.ro', '0733444555', 4000, '2023-03-01 10:00:00', '5%');
-
--- 2. Inserare Clienti
-INSERT INTO client (nume, nr_tel, mail, parola, km_parcursi, activ) VALUES
-('Popescu Ana', 0722000111, 'ana.popescu@mail.com', 'passA', 120, 1),
-('Marin George', 0733111222, 'george.m@mail.com', 'passB', 45, 1),
-('Enache Elena', 0744222333, 'elena.e@mail.com', 'passC', 300, 1);
-
--- 3. Inserare Soferi
-INSERT INTO sofer (nume, telefon, mail, parola, status, cnp, activ) VALUES
-('Ionescu Vasile', '0744123123', 'vasile@sofer.ro', 'parola1', 'disponibil', '1850202112233', 1),
-('Dumitrescu Ion', '0755987987', 'ion@sofer.ro', 'parola2', 'in_cursa', '1880505334455', 1),
-('Stan Mihai', '0766112233', 'mihai@sofer.ro', 'parola3', 'offline', '1920808998877', 1);
-
--- 4. Inserare Masini (Atentie: id_sofer trebuie sa existe deja!)
-INSERT INTO masina (sofer_id_sofer, nr_inmatriculare, model, categorie, km_parcursi) VALUES
-(1, 'B 101 ABC', 'Dacia Logan', 'Standard', 45000),
-(2, 'CJ 20 DEF', 'Skoda Octavia', 'Premium', 80000),
-(3, 'TM 33 GHI', 'VW Passat', 'Premium', 120000);
-
--- 5. Inserare Discounturi
-INSERT INTO discount (cod_discount, valoare, data_expirare, tip_valoare) VALUES
-('BUNVENIT', 15, '2025-12-31 23:59:59', 'procent'),
-('REDUCERE10', 10, '2024-06-01 00:00:00', 'fix');
-
--- 6. Legatura Client - Discount
-INSERT INTO client_has_discount (client_id_client, discount_id_discount) VALUES
-(1, 1),
-(2, 2);
-
--- 7. Inserare Curse
-INSERT INTO cursa (client_id_client, sofer_id_sofer, plecare, destinatie, data_comanda, ora_comanda, durata_estimata, ora_start, ora_destinatie, pret_estimat, pret_final, distanta) VALUES
-(1, 1, 10, 45, '2024-04-10', '14:30:00', 20, 14, 15, 25.5, 25.5, 7.2),
-(2, 2, 20, 80, '2024-04-11', '09:00:00', 35, 9, 10, 40.0, 42.0, 12.5),
-(3, 1, 5, 15, '2024-04-12', '18:15:00', 15, 18, 18, 18.0, 18.0, 4.5);
-
--- 8. Inserare Tranzactii (Banii intrati in firma)
-INSERT INTO tranzactii (tip, suma, data, descriere, administrativ_cnp_angajat) VALUES
-('Incasare Cursa', 25.5, '2024-04-10 15:00:00', 'Incasare card client 1', '2950505987654'),
-('Incasare Cursa', 42.0, '2024-04-11 10:00:00', 'Incasare cash client 2', '2950505987654');
-
--- 9. Inserare Plata (Datele despre achitarea cursei)
-INSERT INTO plata (cursa_id_cursa, metoda_plata, data_ora, status, suma, tips, tranzactii_id_tranzactie) VALUES
-(1, 'Card', '2024-04-10 15:05:00', 1, 25.5, 5.0, 1),
-(2, 'Cash', '2024-04-11 10:05:00', 1, 42.0, 0.0, 2);
-
--- 10. Inserare Card (Asocierea clientului cu plata din baza de date)
-INSERT INTO card (client_id_client, plata_cursa_id_cursa) VALUES
-(1, 1);
-
--- 11. Inserare Recenzii
-INSERT INTO recenzie (sofer_id_sofer, client_id_client, rating, comentarii, tip_autor) VALUES
-(1, 1, 5, 'Sofer foarte politicos, masina curata.', 'client'),
-(2, 2, 4, 'A intarziat putin, dar a condus bine.', 'client'),
-(1, 3, 5, 'Client la timp, cursa placuta.', 'sofer');
-
--- 12. Inserare Certificate Soferi
-INSERT INTO certificat (sofer_id_sofer, certificat_tip, certificat_poza, data_exp_certif) VALUES
-(1, NULL, NULL, '2026-05-20'),
-(2, NULL, NULL,'2025-10-15');
 
 -- testare LUCA;
 
