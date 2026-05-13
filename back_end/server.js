@@ -56,342 +56,389 @@ app.get('/api/curse/:id_client', (req, res) => {
     });
 });
 
-// --- SISTEM DE AUTENTIFICARE DINAMIC ---
 
+// SISTM DE AUTENTIFICARE
+{
 // LOGIN(sofer sau client)
-app.post('/api/login', (req, res) => {
-    const { email, parola, userType } = req.body;
-    let query = '';
-
-    // SOFER
-    if (userType === 'driver') {
-        query = `
-            SELECT s.*, m.nr_inmatriculare , m.model, m.categorie, m.km_parcursi, m.culoare, m.an_fabricare
-            FROM sofer s 
-            LEFT JOIN masina m ON s.id_sofer = m.sofer_id_sofer 
-            WHERE s.mail = ? AND s.parola = ?
-        `;
-    } else {
-        // CLIENT
-        // aici faci modificarile daca ai nevoie de ceva legat de login pentru client. TE ROG NU MODIFICA PT DRIVER SI NU FACE ALTA METODA DE LOGIN CA SE FUTE
-        // AM INCERCAT SA LE SEPAR!
-        query = `SELECT * FROM client WHERE mail = ? AND parola = ?`;
-    }
-
-    db.query(query, [email, parola], (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: 'Eroare de server' });
-
-        if (results.length > 0) {
-            const user = { ...results[0] };
-            delete user.parola;
-
-            // Setăm statusul la 'online doar dacă este șofer
-            if (userType === 'driver') {
-                const updateStatusQuery = "UPDATE sofer SET status = 'online' WHERE id_sofer = ?";
-                db.query(updateStatusQuery, [user.id_sofer], (statusErr) => {
-                    if (statusErr) console.error("Eroare la setarea statusului online:", statusErr.message);
-                });
-            }
-
-            res.json({ success: true, user, role: userType });
+    app.post('/api/login', (req, res) => {
+        const {email, parola, userType} = req.body;
+        let query = '';
+        // SOFER
+        if (userType === 'driver') {
+            query = `
+                SELECT s.*, m.nr_inmatriculare, m.model, m.categorie, m.km_parcursi, m.culoare, m.an_fabricare
+                FROM sofer s
+                         LEFT JOIN masina m ON s.id_sofer = m.sofer_id_sofer
+                WHERE s.mail = ?
+                  AND s.parola = ?
+            `;
         } else {
-            res.status(401).json({ success: false, message: "Email sau parolă incorectă!" });
-        }
-    });
-});
-
-// SIGN UP (sofer sau client)
-app.post('/api/signup', (req, res) => {
-    const { nume, email, parola, userType } = req.body;
-    const tableName = (userType === 'driver') ? 'sofer' : 'client';
-
-    if (!nume || !email || !parola) {
-        return res.status(400).json({ success: false, message: "Toate câmpurile sunt obligatorii!" });
-    }
-
-    console.log(`Înregistrare: ${userType} în tabelul ${tableName}`);
-
-    const checkUser = `SELECT mail FROM ${tableName} WHERE mail = ?`;
-
-    db.query(checkUser, [email], (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
-
-        if (results.length > 0) {
-            return res.status(400).json({ success: false, message: "Email deja înregistrat!" });
+            // CLIENT
+            // aici faci modificarile daca ai nevoie de ceva legat de login pentru client. TE ROG NU MODIFICA PT DRIVER SI NU FACE ALTA METODA DE LOGIN CA SE FUTE
+            // AM INCERCAT SA LE SEPAR!
+            query = `SELECT *
+                     FROM client
+                     WHERE mail = ?
+                       AND parola = ?`;
         }
 
-        const insertQuery = `INSERT INTO ${tableName} (nume, mail, parola) VALUES (?, ?, ?)`;
-        db.query(insertQuery, [nume, email, parola], (err, result) => {
-            if (err) {
-                console.error('Eroare SQL la inserare:', err.message);
-                return res.status(500).json({ success: false, message: "Eroare la crearea contului." });
-            }
-            res.json({ success: true, message: `Cont de ${userType} creat cu succes!` });
-        });
-    });
-});
-// --- RUTE SOFER ---
-
-// optinem statisticile si informatiile despre sofer
-app.get('/api/driver-stats/:id_sofer', (req, res) => {
-    const id = req.params.id_sofer;
-    const querySofer = `
-        SELECT
-            s.nume, s.mail, s.telefon, s.cnp, 
-            m.nr_inmatriculare, m.model, m.categorie, m.an_fabricare, m.culoare,
-            (SELECT COUNT(*) FROM cursa WHERE sofer_id_sofer = ?) as totalTrips,
-            (SELECT IFNULL(ROUND(AVG(rating), 1), 5.0) FROM recenzie WHERE sofer_id_sofer = ? AND tip_autor = 'client') as rating,
-            (SELECT IFNULL(SUM(pret_final), 0) FROM cursa WHERE sofer_id_sofer = ?) as totalEarnings,
-            (SELECT IFNULL(SUM(distanta), 0) FROM cursa WHERE sofer_id_sofer = ?) as km_parcursi
-        FROM sofer s
-                 LEFT JOIN masina m ON s.id_sofer = m.sofer_id_sofer
-        WHERE s.id_sofer = ?
-    `;
-
-    db.query(querySofer, [id, id, id, id, id], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (results.length > 0) {
-            const driverData = results[0];
-            const queryCert = `SELECT id_certificat, certificat_tip, data_exp_certif FROM certificat WHERE sofer_id_sofer = ?`;
-            db.query(queryCert, [id], (errCert, certResults) => {
-                if (errCert) {
-                    console.error("Eroare la extragerea certificatelor:", errCert.message);
-                    driverData.certificates = [];
-                } else {
-                    driverData.certificates = certResults;
+        db.query(query, [email, parola], (err, results) => {
+            if (err) return res.status(500).json({success: false, message: 'Eroare de server'});
+            if (results.length > 0) {
+                const user = {...results[0]};
+                delete user.parola;
+                if (userType === 'driver') {
+                    const updateStatusQuery = "UPDATE sofer SET status = 'online' WHERE id_sofer = ?";
+                    db.query(updateStatusQuery, [user.id_sofer], (statusErr) => {
+                        if (statusErr) console.error("Eroare la setarea statusului online:", statusErr.message);
+                    });
                 }
-                res.json(driverData);
-            });
-        } else {
-            res.status(404).json({ message: "Șoferul nu a fost găsit" });
-        }
-    });
-});
-
-// Actualizare profil șofer
-app.put('/api/update-driver-profile', (req, res) => {
-    const { id_sofer, telefon, cnp, nr_inmatriculare, model, categorie, an_fabricare, culoare } = req.body;
-
-    // 1. Actualizăm datele în tabelul SOFER
-    const querySofer = 'UPDATE sofer SET telefon = ?, cnp = ? WHERE id_sofer = ?';
-
-    db.query(querySofer, [telefon, cnp, id_sofer], (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Șofer inexistent!" });
-        }
-
-        // 2. Inserăm sau actualizăm datele în tabelul MASINA
-        const queryMasina = `
-            INSERT INTO masina (sofer_id_sofer, nr_inmatriculare, model, categorie, an_fabricare, culoare)
-            VALUES (?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE nr_inmatriculare = ?, model = ?, categorie = ?, an_fabricare = ?, culoare = ?
-        `;
-        const valoriMasina = [
-            id_sofer, nr_inmatriculare, model, categorie, an_fabricare, culoare,
-            nr_inmatriculare, model, categorie, an_fabricare, culoare
-        ];
-
-        db.query(queryMasina, valoriMasina, (errMasina, resMasina) => {
-            if (errMasina) {
-                console.error("Eroare la salvarea mașinii:", errMasina.message);
-                return res.json({ success: true, message: "Profil salvat, dar eroare la mașină." });
+                res.json({success: true, user, role: userType});
+            } else {
+                res.status(401).json({success: false, message: "Email sau parolă incorectă!"});
             }
-
-            res.json({ success: true, message: "Profil și mașină actualizate cu succes!" });
         });
     });
-});
+// SIGN UP (sofer sau client)
+    app.post('/api/signup', (req, res) => {
+        const {nume, email, parola, userType} = req.body;
+        const tableName = (userType === 'driver') ? 'sofer' : 'client';
 
-// ruta adaugare certificat
-app.post('/api/add-certificate', (req, res) => {
-    const { sofer_id_sofer, certificat_tip, data_exp_certif, fileData} = req.body;
-
-    if (!sofer_id_sofer || !certificat_tip || !data_exp_certif) {
-        return res.status(400).json({ success: false, message: "Toate câmpurile sunt obligatorii!" });
-    }
-    let fileBuffer = null;
-    if (fileData) {
-        const base64Data = fileData.split(';base64,').pop();
-        fileBuffer = Buffer.from(base64Data, 'base64');
-    }
-    // Inserăm în baza de date
-    const query = `
-        INSERT INTO certificat (sofer_id_sofer, certificat_tip, data_exp_certif, certificat_poza) 
-        VALUES (?, ?, ?, ?)
-    `;
-
-    db.query(query, [sofer_id_sofer, certificat_tip, data_exp_certif, fileBuffer], (err, result) => {
-        if (err) {
-            console.error("Eroare la inserarea certificatului:", err.message);
-            return res.status(500).json({ success: false, message: "Eroare la salvarea documentului." });
+        if (!nume || !email || !parola) {
+            return res.status(400).json({success: false, message: "Toate câmpurile sunt obligatorii!"});
         }
-        res.json({ success: true, message: "Document adăugat cu succes!" });
-    });
-});
 
-// ruta vizualizare certif
-app.get('/api/view-certificate/:id', (req, res) => {
-    const id = req.params.id;
-    const query = 'SELECT certificat_poza FROM certificat WHERE id_certificat = ?';
+        console.log(`Înregistrare: ${userType} în tabelul ${tableName}`);
 
-    db.query(query, [id], (err, results) => {
-        if (err) return res.status(500).send("Eroare de server");
+        const checkUser = `SELECT mail
+                           FROM ${tableName}
+                           WHERE mail = ?`;
 
-        if (results.length > 0 && results[0].certificat_poza) {
-            const buffer = results[0].certificat_poza;
-            let contentType = 'application/octet-stream';
-            if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
-                contentType = 'application/pdf'; // pdf
-            } else if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
-                contentType = 'image/jpeg'; //jpeg
-            } else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
-                contentType = 'image/png'; //png
+        db.query(checkUser, [email], (err, results) => {
+            if (err) return res.status(500).json({success: false, message: err.message});
+
+            if (results.length > 0) {
+                return res.status(400).json({success: false, message: "Email deja înregistrat!"});
             }
-            res.setHeader('Content-Type', contentType);
-            res.send(buffer);
-        } else {
-            res.status(404).send("Fișierul nu a fost găsit sau nu a fost încărcat.");
-        }
+
+            const insertQuery = `INSERT INTO ${tableName} (nume, mail, parola)
+                                 VALUES (?, ?, ?)`;
+            db.query(insertQuery, [nume, email, parola], (err, result) => {
+                if (err) {
+                    console.error('Eroare SQL la inserare:', err.message);
+                    return res.status(500).json({success: false, message: "Eroare la crearea contului."});
+                }
+                res.json({success: true, message: `Cont de ${userType} creat cu succes!`});
+            });
+        });
     });
-});
+}
+// --- RUTE SOFER ---
+{
+// optinem statisticile si informatiile despre sofer(most part of ACCOUNT)
+    app.get('/api/driver-stats/:id_sofer', (req, res) => {
+        const id = req.params.id_sofer;
+        const querySofer = `
+            SELECT s.nume,
+                   s.mail,
+                   s.telefon,
+                   s.cnp,
+                   m.nr_inmatriculare,
+                   m.model,
+                   m.categorie,
+                   m.an_fabricare,
+                   m.culoare,
+                   (SELECT COUNT(*) FROM cursa WHERE sofer_id_sofer = ?)                   as totalTrips,
+                   (SELECT IFNULL(ROUND(AVG(rating), 1), 5.0)
+                    FROM recenzie
+                    WHERE sofer_id_sofer = ? AND tip_autor = 'client')                     as rating,
+                   (SELECT IFNULL(SUM(pret_final), 0) FROM cursa WHERE sofer_id_sofer = ?) as totalEarnings,
+                   (SELECT IFNULL(SUM(distanta), 0) FROM cursa WHERE sofer_id_sofer = ?)   as km_parcursi
+            FROM sofer s
+                     LEFT JOIN masina m ON s.id_sofer = m.sofer_id_sofer
+            WHERE s.id_sofer = ?
+        `;
+        db.query(querySofer, [id, id, id, id, id], (err, results) => {
+            if (err) return res.status(500).json({error: err.message});
+            if (results.length > 0) {
+                const driverData = results[0];
+                const queryCert = `SELECT id_certificat, certificat_tip, data_exp_certif
+                                   FROM certificat
+                                   WHERE sofer_id_sofer = ?`;
+                db.query(queryCert, [id], (errCert, certResults) => {
+                    if (errCert) {
+                        console.error("Eroare la extragerea certificatelor:", errCert.message);
+                        driverData.certificates = [];
+                    } else {
+                        driverData.certificates = certResults;
+                    }
+                    res.json(driverData);
+                });
+            } else {
+                res.status(404).json({message: "Șoferul nu a fost găsit"});
+            }
+        });
+    });
+// metoda de editare si actualizare a contului
+    app.put('/api/update-driver-profile', (req, res) => {
+        const {id_sofer, telefon, cnp, nr_inmatriculare, model, categorie, an_fabricare, culoare} = req.body;
+        //pt tabelul sofer
+        const querySofer = 'UPDATE sofer SET telefon = ?, cnp = ? WHERE id_sofer = ?';
+        db.query(querySofer, [telefon, cnp, id_sofer], (err, result) => {
+            if (err) return res.status(500).json({success: false, message: err.message});
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({success: false, message: "Șofer inexistent!"});
+            }
+            //pt tabelul masina
+            const queryMasina = `
+                INSERT INTO masina (sofer_id_sofer, nr_inmatriculare, model, categorie, an_fabricare, culoare)
+                VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY
+                UPDATE nr_inmatriculare = ?, model = ?, categorie = ?, an_fabricare = ?, culoare = ?
+            `;
+            const valoriMasina = [
+                id_sofer, nr_inmatriculare, model, categorie, an_fabricare, culoare,
+                nr_inmatriculare, model, categorie, an_fabricare, culoare
+            ];
+            db.query(queryMasina, valoriMasina, (errMasina, resMasina) => {
+                if (errMasina) {
+                    console.error("Eroare la salvarea mașinii:", errMasina.message);
+                    return res.json({success: true, message: "Profil salvat, dar eroare la mașină."});
+                }
+                res.json({success: true, message: "Profil și mașină actualizate cu succes!"});
+            });
+        });
+    });
+// ruta de adaugare cerificat in tabelul CERTIFICAT
+    app.post('/api/add-certificate', (req, res) => {
+        const {sofer_id_sofer, certificat_tip, data_exp_certif, fileData} = req.body;
+        if (!sofer_id_sofer || !certificat_tip || !data_exp_certif) {
+            return res.status(400).json({success: false, message: "Toate câmpurile sunt obligatorii!"});
+        }
+        let fileBuffer = null;
+        if (fileData) {
+            const base64Data = fileData.split(';base64,').pop();
+            fileBuffer = Buffer.from(base64Data, 'base64');
+        }
+        const query = `
+            INSERT INTO certificat (sofer_id_sofer, certificat_tip, data_exp_certif, certificat_poza)
+            VALUES (?, ?, ?, ?)
+        `;
+        db.query(query, [sofer_id_sofer, certificat_tip, data_exp_certif, fileBuffer], (err, result) => {
+            if (err) {
+                console.error("Eroare la inserarea certificatului:", err.message);
+                return res.status(500).json({success: false, message: "Eroare la salvarea documentului."});
+            }
+            res.json({success: true, message: "Document adăugat cu succes!"});
+        });
+    });
+// ruta vizualizare certificat
+    app.get('/api/view-certificate/:id', (req, res) => {
+        const id = req.params.id;
+        const query = 'SELECT certificat_poza FROM certificat WHERE id_certificat = ?';
+        db.query(query, [id], (err, results) => {
+            if (err) return res.status(500).send("Eroare de server");
+            if (results.length > 0 && results[0].certificat_poza) {
+                const buffer = results[0].certificat_poza;
+                let contentType = 'application/octet-stream';
+                if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+                    contentType = 'application/pdf'; // pdf
+                } else if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+                    contentType = 'image/jpeg'; //jpeg
+                } else if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+                    contentType = 'image/png'; //png
+                }
+                res.setHeader('Content-Type', contentType);
+                res.send(buffer);
+            } else {
+                res.status(404).send("Fișierul nu a fost găsit sau nu a fost încărcat.");
+            }
+        });
+    });
 
 // LOGOUT si modificare tabel sofer offline
-app.post('/api/logout', (req, res) => {
-    const { userId, userType } = req.body;
-
-    if (userType === 'driver' && userId) {
-        const query = "UPDATE sofer SET status = 'offline' WHERE id_sofer = ?";
-        db.query(query, [userId], (err) => {
-            if (err) {
-                console.error("Eroare la setarea statusului offline:", err.message);
-                return res.status(500).json({ success: false });
-            }
-            res.json({ success: true, message: "Status setat pe offline" });
-        });
-    } else {
-        res.json({ success: true });
-    }
-});
-// rute pentru sofer - curssa
-// 1. Obține cursele disponibile (status: 'Waiting Driver')
-app.get('/api/available-rides', (req, res) => {
-    const categorieSofer = req.query.categorie; // Primim categoria din Frontend
-
-    const query = `
-        SELECT c.*, cl.nume as passengerName 
-        FROM cursa c 
-        JOIN client cl ON c.client_id_client = cl.id_client 
-        WHERE c.status = 'Asteptare Sofer' AND c.categorie = ?
-        ORDER BY c.data_comanda DESC, c.ora_comanda DESC
-    `;
-
-    db.query(query, [categorieSofer], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
+    app.post('/api/logout', (req, res) => {
+        const {userId, userType} = req.body;
+        if (userType === 'driver' && userId) {
+            const query = "UPDATE sofer SET status = 'offline' WHERE id_sofer = ?";
+            db.query(query, [userId], (err) => {
+                if (err) {
+                    console.error("Eroare la setarea statusului offline:", err.message);
+                    return res.status(500).json({success: false});
+                }
+                res.json({success: true, message: "Status setat pe offline"});
+            });
+        } else {
+            res.json({success: true});
+        }
     });
-});
-
+}
+// rute pentru sofer - cursa
+{
+// 1. ruta de obtinere ce curse sunt active pe categoria noastra(status: 'Waiting Driver')
+    app.get('/api/available-rides', (req, res) => {
+        const categorieSofer = req.query.categorie;
+        const query = `
+            SELECT c.*, cl.nume as passengerName
+            FROM cursa c
+                     JOIN client cl ON c.client_id_client = cl.id_client
+            WHERE c.status = 'Waiting Driver'
+              AND c.categorie = ?
+            ORDER BY c.data_comanda DESC, c.ora_comanda DESC
+        `;
+        db.query(query, [categorieSofer], (err, results) => {
+            if (err) return res.status(500).json({error: err.message});
+            res.json(results);
+        });
+    });
 // 2. Verifică dacă șoferul are o cursă activă ('In ride') atunci când reîncarcă pagina
-app.get('/api/active-ride/:id_sofer', (req, res) => {
-    const id = req.params.id_sofer;
-    const query = `
-        SELECT c.*, cl.nume as passengerName 
-        FROM cursa c 
-        JOIN client cl ON c.client_id_client = cl.id_client 
-        WHERE c.sofer_id_sofer = ? AND c.status = 'In ride' 
-        LIMIT 1
-    `;
-
-    db.query(query, [id], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results.length > 0 ? results[0] : null);
-    });
-});
-
-// 3. ruta ca soferul sa accepte calatoria
-app.post('/api/accept-ride', (req, res) => {
-    const { id_cursa, id_sofer } = req.body;
-    const oraStart = new Date().getHours();
-
-    const updateCursa = "UPDATE cursa SET status = 'In ride', sofer_id_sofer = ?, ora_start = ? WHERE id_cursa = ?";
-
-    db.query(updateCursa, [id_sofer, oraStart, id_cursa], (err) => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
-
-        const updateSofer = "UPDATE sofer SET status = 'in_ride' WHERE id_sofer = ?";
-        db.query(updateSofer, [id_sofer], (errSofer) => {
-            if (errSofer) console.error("Eroare update status sofer:", errSofer);
-            res.json({ success: true, message: "Cursă preluată cu succes!", ora_start: oraStart });
+    app.get('/api/active-ride/:id_sofer', (req, res) => {
+        const id = req.params.id_sofer;
+        const query = `
+            SELECT c.*, cl.nume as passengerName
+            FROM cursa c
+                     JOIN client cl ON c.client_id_client = cl.id_client
+            WHERE c.sofer_id_sofer = ?
+              AND c.status = 'In ride' LIMIT 1
+        `;
+        db.query(query, [id], (err, results) => {
+            if (err) return res.status(500).json({error: err.message});
+            res.json(results.length > 0 ? results[0] : null);
         });
     });
-});
-// 4. ruta de terminare a calatoriei
-app.post('/api/end-ride', (req, res) => {
-    const { id_cursa, id_sofer } = req.body;
-    const oraDestinatie = new Date().getHours();
-    const randomExtra = Math.floor(Math.random() * 51);
-
-    const getPriceQuery = "SELECT pret_estimat FROM cursa WHERE id_cursa = ?";
-
-    db.query(getPriceQuery, [id_cursa], (err, results) => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
-        if (results.length === 0) return res.status(404).json({ success: false, message: "Cursa nu a fost găsită" });
-
-        const pretEstimat = results[0].pret_estimat;
-        const pretFinal = pretEstimat + randomExtra;
-
-        const updateCursa = "UPDATE cursa SET status = 'Ride Finished', ora_destinatie = ?, pret_final = ? WHERE id_cursa = ?";
-
-        db.query(updateCursa, [oraDestinatie, pretFinal, id_cursa], (err) => {
-            if (err) return res.status(500).json({ success: false, message: err.message });
-
-            const updateSofer = "UPDATE sofer SET status = 'online' WHERE id_sofer = ?";
+// 3. ruta ca soferul sa accepte calatoria(update status 'In ride')
+    app.post('/api/accept-ride', (req, res) => {
+        const {id_cursa, id_sofer} = req.body;
+        const oraStart = new Date().getHours();
+        const updateCursa = "UPDATE cursa SET status = 'In ride', sofer_id_sofer = ?, ora_start = ? WHERE id_cursa = ?";
+        db.query(updateCursa, [id_sofer, oraStart, id_cursa], (err) => {
+            if (err) return res.status(500).json({success: false, message: err.message});
+            const updateSofer = "UPDATE sofer SET status = 'in_ride' WHERE id_sofer = ?";
             db.query(updateSofer, [id_sofer], (errSofer) => {
                 if (errSofer) console.error("Eroare update status sofer:", errSofer);
-                res.json({
-                    success: true,
-                    message: "Cursă finalizată!",
-                    pret_final: pretFinal,
-                    bonus_random: randomExtra
+                res.json({success: true, message: "Cursă preluată cu succes!", ora_start: oraStart});
+            });
+        });
+    });
+// 4. ruta de terminare a calatoriei(update status 'Ride Finished')
+    app.post('/api/end-ride', (req, res) => {
+        const { id_cursa, id_sofer } = req.body;
+        const oraDestinatie = new Date().getHours();
+        const getQuery = "SELECT pret_estimat, tips FROM cursa WHERE id_cursa = ?";
+
+        db.query(getQuery, [id_cursa], (err, results) => {
+            if (err) return res.status(500).json({ success: false, message: err.message });
+            if (results.length === 0) return res.status(404).json({ success: false, message: "Cursa nu a fost găsită" });
+
+            const pretEstimat = results[0].pret_estimat;
+            const tipsClient = results[0].tips || 0; // Luăm tips-ul ales, default 0
+
+            const variatieRandom = Math.floor(Math.random() * 21) - 10;
+            let pretFinal = pretEstimat + variatieRandom;
+            if (pretFinal < 5) pretFinal = 5;
+            const updateCursa = "UPDATE cursa SET status = 'Ride Finished', ora_destinatie = ?, pret_final = ? WHERE id_cursa = ?";
+            db.query(updateCursa, [oraDestinatie, pretFinal, id_cursa], (err) => {
+                if (err) return res.status(500).json({ success: false, message: err.message });
+                const insertPlata = `
+                INSERT INTO plata (cursa_id_cursa, metoda_plata, data_ora, status, suma, tips) 
+                VALUES (?, 'Card', NOW(), 1, ?, ?)
+            `;
+                db.query(insertPlata, [id_cursa, pretFinal, tipsClient], (errPlata) => {
+                    if (errPlata) console.error("Eroare la înregistrarea plății:", errPlata.message);
+                    const updateSofer = "UPDATE sofer SET status = 'online' WHERE id_sofer = ?";
+                    db.query(updateSofer, [id_sofer], (errSofer) => {
+                        if (errSofer) console.error("Eroare update status sofer:", errSofer);
+                        res.json({
+                            success: true,
+                            message: "Cursă finalizată și tips înregistrat!",
+                            pret_cursa: pretFinal,
+                            tips: tipsClient
+                        });
+                    });
                 });
             });
         });
     });
-});
-// 5. Istoricul curselor pentru Sofer (Ride Finished)
-app.get('/api/driver-history/:id_sofer', (req, res) => {
-    const id = req.params.id_sofer;
-    const query = `
-        SELECT 
-            c.id_cursa as id,
-            c.data_comanda as date,
+// 5. Istoricul curselor pentru Sofer (SELECT cursa WHERE 'Ride Finished')
+    app.get('/api/driver-history/:id_sofer', (req, res) => {
+        const id = req.params.id_sofer;
+        const query = `
+            SELECT c.id_cursa as id,
+                   c.data_comanda as date,
             c.ora_comanda as time,
             cl.nume as passenger,
-            c.plecare as from_loc,
-            c.destinatie as to_loc,
+            c.plecare as from_zone
+            c.destinatie as to_zone,
             c.distanta as distance,
-            c.durata_estimata as duration,
             c.pret_final as fare,
             IFNULL(p.tips, 0) as tip
-        FROM cursa c
-        JOIN client cl ON c.client_id_client = cl.id_client
-        LEFT JOIN plata p ON c.id_cursa = p.cursa_id_cursa
-        WHERE c.sofer_id_sofer = ? AND c.status = 'Ride Finished'
-        ORDER BY c.data_comanda DESC, c.ora_comanda DESC
-    `;
-
-    db.query(query, [id], (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
+            FROM cursa c
+                JOIN client cl
+            ON c.client_id_client = cl.id_client
+                LEFT JOIN plata p ON c.id_cursa = p.cursa_id_cursa
+            WHERE c.sofer_id_sofer = ? AND c.status = 'Ride Finished'
+            ORDER BY c.data_comanda DESC, c.ora_comanda DESC
+        `;
+        db.query(query, [id], (err, results) => {
+            if (err) return res.status(500).json({error: err.message});
+            res.json(results);
+        });
     });
-});
+}
+// rute pentru cursa - sofer
+{
+//creeare cursa
+    app.post('/api/create-ride', (req, res) => {
+        const {client_id_client, plecare, destinatie, distanta, categorie} = req.body;
+        // Definim tarifele pe km
+        const tarife = {
+            'economy': 2.40,
+            'standard': 2.90,
+            'premium': 3.50,
+            'xl': 4.50
+        };
+        const pret_estimat = parseFloat(distanta) * (tarife[categorie.toLowerCase()] || 2.90);
+        const status = 'Waiting Driver';
+        const data_comanda = new Date().toISOString().split('T')[0];
+        const ora_comanda = new Date().toLocaleTimeString('ro-RO', {hour12: false});
+        const query = `
+            INSERT INTO cursa
+            (client_id_client, status, plecare, destinatie, categorie, data_comanda, ora_comanda, pret_estimat,
+             distanta)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        db.query(query, [client_id_client, status, plecare, destinatie, categorie, data_comanda, ora_comanda, pret_estimat, distanta], (err, result) => {
+            if (err) return res.status(500).json({success: false, message: err.message});
+            res.json({success: true, pret: pret_estimat, id_cursa: result.insertId});
+        });
+    });
+// verifica daca statusul In ride, Waiting Driver
+    app.get('/api/client-active-ride/:id_client', (req, res) => {
+        const id = req.params.id_client;
+        const query = `
+            SELECT c.*, s.nume as driverName, m.nr_inmatriculare, m.model
+            FROM cursa c
+                     LEFT JOIN sofer s ON c.sofer_id_sofer = s.id_sofer
+                     LEFT JOIN masina m ON s.id_sofer = m.sofer_id_sofer
+            WHERE c.client_id_client = ?
+              AND c.status IN ('Waiting Driver', 'In ride') LIMIT 1
+        `;
+        db.query(query, [id], (err, results) => {
+            if (err) return res.status(500).json({error: err.message});
+            res.json(results.length > 0 ? results[0] : null);
+        });
+    });
+// tips pentru sofer
+    app.put('/api/update-tip', (req, res) => {
+        const {id_cursa, tips} = req.body;
+        const query = "UPDATE cursa SET tips = ? WHERE id_cursa = ?";
 
-
-
-
-
+        db.query(query, [tips, id_cursa], (err) => {
+            if (err) return res.status(500).json({success: false, message: err.message});
+            res.json({success: true, message: "Tips actualizat!"});
+        });
+    });
+}
 //Not me
 // --- RUTE CLIENT ---
 
@@ -626,30 +673,3 @@ app.listen(PORT, () => {
 });
 
 // ruta de creeare cursa client
-app.post('/api/create-ride', (req, res) => {
-    const { client_id_client, plecare, destinatie, distanta, categorie } = req.body;
-
-    // Definim tarifele pe km
-    const tarife = {
-        'economy': 2.40,
-        'standard': 2.90,
-        'premium': 3.50,
-        'xl': 4.50
-    };
-
-    const pret_estimat = parseFloat(distanta) * (tarife[categorie.toLowerCase()] || 2.90);
-    const status = 'Asteptare Sofer';
-    const data_comanda = new Date().toISOString().split('T')[0];
-    const ora_comanda = new Date().toLocaleTimeString('ro-RO', { hour12: false });
-
-    const query = `
-        INSERT INTO cursa 
-        (client_id_client, status, plecare, destinatie, categorie, data_comanda, ora_comanda, pret_estimat, distanta) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    db.query(query, [client_id_client, status, plecare, destinatie, categorie, data_comanda, ora_comanda, pret_estimat, distanta], (err, result) => {
-        if (err) return res.status(500).json({ success: false, message: err.message });
-        res.json({ success: true, pret: pret_estimat, id_cursa: result.insertId });
-    });
-});
