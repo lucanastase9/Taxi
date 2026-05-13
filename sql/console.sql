@@ -66,11 +66,12 @@ CREATE TABLE masina (
 CREATE TABLE client (
     id_client INT AUTO_INCREMENT PRIMARY KEY,
     nume VARCHAR(100) NOT NULL,
-    nr_tel DOUBLE,
+    nr_tel VARCHAR(20),
     mail VARCHAR(100) UNIQUE,
     parola VARCHAR(45),
     km_parcursi INT DEFAULT 0,
     adresa VARCHAR(100),
+    metoda_plata VARCHAR(45),
     activ BIT(1) DEFAULT 1
 );
 

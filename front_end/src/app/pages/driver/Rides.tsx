@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Navigation, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { MapPin, Navigation, Clock, CheckCircle2, AlertTriangle, Star } from 'lucide-react';
 import RideNotification from '../../components/RideNotification';
 
 export default function DriverRides() {
@@ -11,6 +11,11 @@ export default function DriverRides() {
   const [availableRides, setAvailableRides] = useState<any[]>([]);
   const [activeRide, setActiveRide] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Stări pentru Recenzie
+  const [reviewRating, setReviewRating] = useState<number>(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   useEffect(() => {
     // Luăm ID-ul șoferului din LocalStorage
@@ -74,6 +79,10 @@ export default function DriverRides() {
 
       const data = await response.json();
       if (data.success) {
+        // Resetăm formularul de review
+        setReviewRating(0);
+        setReviewComment('');
+        setReviewSubmitted(false);
         // Reîncărcăm datele pentru a afișa pop-up-ul de Cursă Activă
         loadDashboardData(driverId);
       } else {
@@ -81,6 +90,34 @@ export default function DriverRides() {
       }
     } catch (err) {
       alert("Network error.");
+    }
+  };
+
+  // Logica pentru TRIMITERE RECENZIE CĂTRE CLIENT
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) return alert("Te rugăm să selectezi cel puțin o stea!");
+    if (!activeRide || !driverId) return;
+
+    try {
+      const response = await fetch('http://localhost:5050/api/submit-driver-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sofer_id_sofer: driverId,
+          client_id_client: activeRide.client_id_client,
+          rating: reviewRating,
+          comentarii: reviewComment
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setReviewSubmitted(true);
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      console.error("Eroare trimitere recenzie:", err);
     }
   };
 
@@ -97,8 +134,13 @@ export default function DriverRides() {
 
       const data = await response.json();
       if (data.success) {
-        setActiveRide(null); // Ștergem cursa activă
-        fetchAvailableRides(); // Căutăm alte curse
+        setActiveRide(null);
+        // Curățăm state-ul recenziei pentru curse viitoare
+        setReviewRating(0);
+        setReviewComment('');
+        setReviewSubmitted(false);
+
+        fetchAvailableRides();
         alert("Cursa a fost finalizată cu succes!");
       } else {
         alert("Eroare la finalizare: " + data.message);
@@ -140,17 +182,55 @@ export default function DriverRides() {
                   <div className="p-3 bg-muted rounded-full text-accent"><MapPin size={24}/></div>
                   <div>
                     <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold mb-1">Pickup Location ID</p>
-                    <p className="text-lg font-medium text-foreground">Zona {activeRide.plecare}</p>
+                    <p className="text-lg font-medium text-foreground">{activeRide.plecare}</p>
                   </div>
                 </div>
                 <div className="flex gap-4 items-start">
                   <div className="p-3 bg-muted rounded-full text-primary"><Navigation size={24}/></div>
                   <div>
                     <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold mb-1">Destination ID</p>
-                    <p className="text-lg font-medium text-foreground">Zona {activeRide.destinatie}</p>
+                    <p className="text-lg font-medium text-foreground">{activeRide.destinatie}</p>
                   </div>
                 </div>
               </div>
+
+              {/* === ZONA DE REVIEW PENTRU CLIENT === */}
+              {!reviewSubmitted ? (
+                  <div className="bg-card p-6 rounded-2xl border border-border shadow-sm mb-6">
+                    <div className="flex items-center gap-2 mb-4 text-primary">
+                      <Star size={20} className="fill-yellow-500 text-yellow-500" />
+                      <h3 className="font-bold text-lg text-foreground">Evaluează Clientul</h3>
+                    </div>
+
+                    <div className="flex gap-2 mb-4">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                          <button key={star} onClick={() => setReviewRating(star)}>
+                            <Star className={`w-8 h-8 transition-colors ${reviewRating >= star ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground hover:text-yellow-400'}`} />
+                          </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                        className="w-full bg-muted p-3 rounded-lg border border-border outline-none focus:border-primary mb-4 text-sm resize-none"
+                        placeholder="Cum s-a comportat clientul? (Opțional)"
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        rows={2}
+                    />
+
+                    <button
+                        onClick={handleSubmitReview}
+                        className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-opacity"
+                    >
+                      Trimite Recenzia
+                    </button>
+                  </div>
+              ) : (
+                  <div className="bg-green-50 p-4 rounded-2xl border border-green-200 mb-6 flex items-center justify-center gap-2 text-green-800 shadow-sm">
+                    <CheckCircle2 size={20} />
+                    <p className="font-bold">Recenzia pentru client a fost trimisă. Mulțumim!</p>
+                  </div>
+              )}
 
               <div className="flex justify-end mt-4">
                 <button
@@ -221,7 +301,7 @@ export default function DriverRides() {
                             <MapPin className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
                             <div>
                               <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Pickup Location</div>
-                              <div className="text-sm font-medium">Zona {ride.plecare}</div>
+                              <div className="text-sm font-medium">{ride.plecare}</div>
                             </div>
                           </div>
                           <div className="w-px h-4 bg-border ml-2.5"></div>
@@ -229,7 +309,7 @@ export default function DriverRides() {
                             <Navigation className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                             <div>
                               <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Destination</div>
-                              <div className="text-sm font-medium">Zona {ride.destinatie}</div>
+                              <div className="text-sm font-medium">{ride.destinatie}</div>
                             </div>
                           </div>
                         </div>

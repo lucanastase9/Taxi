@@ -15,6 +15,7 @@ import AdminDrivers from './pages/admin/AdminDrivers';
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
+import DriverReviews from "./pages/driver/Review";
 
 export const router = createBrowserRouter([
   {
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
       { path: "account", Component: DriverAccount },
       { path: "rides", Component: DriverRides },
       { path: "history", Component: DriverHistory },
+      { path: "reviews", Component: DriverReviews },
     ],
   },
 ]);

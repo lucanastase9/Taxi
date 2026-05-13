@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MapPin, Navigation, Calendar, Clock, X, Check, Heart } from 'lucide-react';
+import { MapPin, Navigation, Calendar, Clock, X, Check, Heart, Star } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, Autocomplete, DirectionsRenderer } from '@react-google-maps/api';
 
 const center = { lat: 44.4268, lng: 26.1025 };
@@ -32,9 +32,12 @@ export default function ClientNewRide() {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduledDateTime, setScheduledDateTime] = useState('');
 
-  // === NOILE STATE-URI PENTRU CURSA ACTIVĂ ȘI TIPS ===
+  // STATE-URI PENTRU CURSA ACTIVĂ, TIPS ȘI REVIEWS
   const [activeRide, setActiveRide] = useState<any | null>(null);
   const [tipAmount, setTipAmount] = useState<number>(0);
+  const [reviewRating, setReviewRating] = useState<number>(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const pickupRef = useRef<google.maps.places.Autocomplete | null>(null);
   const destRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -65,7 +68,7 @@ export default function ClientNewRide() {
         const data = await res.json();
         setActiveRide(data);
         if (data && data.tips !== undefined) {
-          setTipAmount(data.tips); // Sincronizăm bacșișul dacă există deja
+          setTipAmount(data.tips);
         }
       }
     } catch (err) {
@@ -73,7 +76,6 @@ export default function ClientNewRide() {
     }
   };
 
-  // FUNCȚIE PENTRU ACTUALIZAREA TIPS-ULUI IN TIMP REAL
   const handleUpdateTip = async (amount: number) => {
     setTipAmount(amount);
     if (!activeRide) return;
@@ -89,9 +91,39 @@ export default function ClientNewRide() {
     }
   };
 
-  // === RESTUL LOGICII GOOGLE MAPS RĂMÂNE LA FEL ===
+  // LOGICA PENTRU TRIMITERE RECENZIE
+  const handleSubmitReview = async () => {
+    if (reviewRating === 0) return alert("Te rugăm să selectezi cel puțin o stea!");
+    if (!activeRide || !activeRide.sofer_id_sofer) return;
+
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const clientId = savedUser.id_client || savedUser.id;
+
+      const response = await fetch('http://localhost:5050/api/submit-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sofer_id_sofer: activeRide.sofer_id_sofer,
+          client_id_client: clientId,
+          rating: reviewRating,
+          comentarii: reviewComment
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setReviewSubmitted(true);
+      } else {
+        alert(data.message);
+      }
+    } catch (err) {
+      console.error("Eroare trimitere recenzie:", err);
+    }
+  };
+
   const onMapClick = (e: google.maps.MapMouseEvent) => {
-    if (!e.latLng || activeRide) return; // Blocăm editarea hărții dacă e în cursă
+    if (!e.latLng || activeRide) return;
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ location: e.latLng }, (results, status) => {
       if (status === "OK" && results && results[0]) {
@@ -169,8 +201,11 @@ export default function ClientNewRide() {
       const data = await response.json();
 
       if (data.success) {
-        // La succes, forțăm o verificare a cursei pentru a încărca noul ecran imediat
         checkActiveRide(clientId);
+        // Resetăm formularul de review pentru curse viitoare
+        setReviewSubmitted(false);
+        setReviewRating(0);
+        setReviewComment('');
       } else {
         alert("Eroare la plasarea comenzii: " + data.message);
       }
@@ -189,6 +224,7 @@ export default function ClientNewRide() {
             <div className="w-full md:w-2/5 p-8 overflow-auto border-r border-border flex flex-col bg-background">
               <h1 className="mb-6 font-bold text-3xl">Cursa ta activă</h1>
 
+              {/* 1. STATUS ȘI DETALII ȘOFER */}
               <div className="bg-primary/5 p-6 rounded-2xl border border-primary/20 mb-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
@@ -223,6 +259,48 @@ export default function ClientNewRide() {
                 )}
               </div>
 
+              {/* 2. ZONA DE REVIEW (Apare doar dacă șoferul a preluat cursa) */}
+              {activeRide.driverName && !reviewSubmitted && (
+                  <div className="bg-card p-6 rounded-2xl border border-border shadow-sm mb-8">
+                    <div className="flex items-center gap-2 mb-4 text-primary">
+                      <Star size={20} className="fill-yellow-500 text-yellow-500" />
+                      <h3 className="font-bold text-lg text-foreground">Evaluează Șoferul</h3>
+                    </div>
+
+                    <div className="flex gap-2 mb-4">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                          <button key={star} onClick={() => setReviewRating(star)}>
+                            <Star className={`w-8 h-8 transition-colors ${reviewRating >= star ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground hover:text-yellow-400'}`} />
+                          </button>
+                      ))}
+                    </div>
+
+                    <textarea
+                        className="w-full bg-muted p-3 rounded-lg border border-border outline-none focus:border-primary mb-4 text-sm resize-none"
+                        placeholder="Cum a fost cursa? (Opțional)"
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        rows={2}
+                    />
+
+                    <button
+                        onClick={handleSubmitReview}
+                        className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-opacity"
+                    >
+                      Trimite Recenzia
+                    </button>
+                  </div>
+              )}
+
+              {/* MESAJ SUCCESS REVIEW */}
+              {activeRide.driverName && reviewSubmitted && (
+                  <div className="bg-green-50 p-4 rounded-2xl border border-green-200 mb-8 flex items-center justify-center gap-2 text-green-800 shadow-sm">
+                    <Check size={20} />
+                    <p className="font-bold">Recenzia a fost trimisă. Mulțumim!</p>
+                  </div>
+              )}
+
+              {/* 3. ZONA DE BACSIS (TIPS) */}
               <div className="mt-auto bg-card p-6 rounded-2xl border border-border shadow-sm">
                 <div className="flex items-center gap-2 mb-4 text-primary">
                   <Heart size={20} />
@@ -245,6 +323,7 @@ export default function ClientNewRide() {
                   ))}
                 </div>
               </div>
+
             </div>
         ) : (
             <div className="w-full md:w-2/5 p-8 overflow-auto border-r border-border flex flex-col bg-background">
@@ -282,7 +361,6 @@ export default function ClientNewRide() {
                   </div>
                 </div>
 
-                {/* RESTUL CODULUI (Timp, Date, Vehicule, Request Buton) */}
                 <div className="space-y-3">
                   {carTypes.map((car) => {
                     const distNum = distance ? parseFloat(distance.replace(/[^\d.]/g, '')) : 0;

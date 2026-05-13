@@ -58,6 +58,20 @@ export default function DriverLayout() {
             <History className="w-5 h-5" />
             <span>Trip History</span>
           </NavLink>
+
+          <NavLink
+              to="/driver/reviews"
+              className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                      isActive
+                          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                          : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  }`
+              }
+          >
+            <History className="w-5 h-5" />
+            <span>Reviews</span>
+          </NavLink>
         </nav>
 
         <div className="absolute bottom-0 w-64 p-3 border-t border-sidebar-border">
