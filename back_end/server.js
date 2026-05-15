@@ -424,7 +424,7 @@ app.get('/api/driver-reviews/:id_sofer', (req, res) => {
                    c.data_comanda as date,
             c.ora_comanda as time,
             cl.nume as passenger,
-            c.plecare as from_zone
+            c.plecare as from_zone,
             c.destinatie as to_zone,
             c.distanta as distance,
             c.pret_final as fare,
@@ -825,9 +825,17 @@ app.post('/api/admin/assign-discount', (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`🚀 Serverul de backend rulează pe http://localhost:${PORT}`);
+const PORT = process.env.PORT || 5050;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Serverul rulează pe portul ${PORT}`);
 });
+
+const cors = require('cors');
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://untitled-pi-seven.vercel.app/'], // Adaugă aici link-ul de la Vercel când îl ai
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 
 // ruta de creeare cursa client
 
