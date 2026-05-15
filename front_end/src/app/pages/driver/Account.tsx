@@ -50,7 +50,7 @@ export default function DriverAccount() {
       setDriver(initialData);
       setEditData(initialData);
 
-      const response = await fetch(`http://localhost:5050/api/driver-stats/${driverId}`, {
+      const response = await fetch(`https://untitled-i7lc.onrender.com`, {
         cache: 'no-store'
       });
 
@@ -108,7 +108,7 @@ export default function DriverAccount() {
     }
 
     try {
-      const response = await fetch('http://localhost:5050/api/update-driver-profile', {
+      const response = await fetch('https://untitled-i7lc.onrender.com', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editData),
@@ -136,7 +136,7 @@ export default function DriverAccount() {
     }
 
     try {
-      const response = await fetch('http://localhost:5050/api/add-certificate', {
+      const response = await fetch('https://untitled-i7lc.onrender.com', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -515,7 +515,7 @@ export default function DriverAccount() {
                             {isExpired ? 'Expired' : 'Active'}
                           </span>
                           <button
-                              onClick={() => window.open(`http://localhost:5050/api/view-certificate/${cert.id_certificat}`, '_blank')}
+                              onClick={() => window.open(`https://untitled-i7lc.onrender.com`, '_blank')}
                               className="font-bold text-[#1B2B48] hover:opacity-70 transition-opacity"
                           >
                             View

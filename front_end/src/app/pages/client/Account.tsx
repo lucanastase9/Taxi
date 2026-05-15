@@ -36,7 +36,7 @@ export default function ClientAccount() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5050/api/client-stats/${clientId}`);
+      const response = await fetch(`https://untitled-i7lc.onrender.com`);
 
       if (response.ok) {
         const data = await response.json();
@@ -67,7 +67,7 @@ export default function ClientAccount() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch('http://localhost:5050/api/update-profile', {
+      const response = await fetch('https://untitled-i7lc.onrender.com', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editData),
@@ -88,7 +88,7 @@ export default function ClientAccount() {
     if (!window.confirm("Ești sigur că vrei să ștergi definitiv acest profil? Toate datele vor fi pierdute.")) return;
 
     try {
-      const response = await fetch(`http://localhost:5050/api/delete-client/${client.id_client}`, {
+      const response = await fetch(`https://untitled-i7lc.onrender.com`, {
         method: 'DELETE'
       });
 

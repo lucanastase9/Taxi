@@ -27,7 +27,7 @@ export default function Login() {
         : { nume: name, email, parola: password, userType };
 
     try {
-      const response = await fetch(`http://localhost:5050${endpoint}`, {
+      const response = await fetch(`https://untitled-i7lc.onrender.com`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

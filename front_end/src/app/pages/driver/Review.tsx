@@ -19,7 +19,7 @@ export default function DriverReviews() {
                 return;
             }
 
-            const response = await fetch(`http://localhost:5050/api/driver-reviews/${driverId}`);
+            const response = await fetch(`https://untitled-i7lc.onrender.com`);
             if (response.ok) {
                 const data = await response.json();
                 setReviews(data);

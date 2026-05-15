@@ -63,7 +63,7 @@ export default function ClientNewRide() {
 
   const checkActiveRide = async (clientId: number) => {
     try {
-      const res = await fetch(`http://localhost:5050/api/client-active-ride/${clientId}`, { cache: 'no-store' });
+      const res = await fetch(`https://untitled-i7lc.onrender.com`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setActiveRide(data);
@@ -81,7 +81,7 @@ export default function ClientNewRide() {
     if (!activeRide) return;
 
     try {
-      await fetch('http://localhost:5050/api/update-tip', {
+      await fetch('https://untitled-i7lc.onrender.com', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_cursa: activeRide.id_cursa, tips: amount })
@@ -100,7 +100,7 @@ export default function ClientNewRide() {
       const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
       const clientId = savedUser.id_client || savedUser.id;
 
-      const response = await fetch('http://localhost:5050/api/submit-review', {
+      const response = await fetch('https://untitled-i7lc.onrender.com', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -192,7 +192,7 @@ export default function ClientNewRide() {
         categorie: car ? car.name : 'Standard'
       };
 
-      const response = await fetch('http://localhost:5050/api/create-ride', {
+      const response = await fetch('https://untitled-i7lc.onrender.com', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
