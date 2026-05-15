@@ -31,7 +31,7 @@ const db = mysql.createConnection({
     host: 'taxidb-bordeialexandraioana-taxiservice.j.aivencloud.com', // NU mai e localhost
     user: 'avnadmin',
     password: 'AVNS_fZOrsnR2EPkWWa1tnG0',
-    database: 'defaultdb',
+    database: 'taxidb',
     port: 11584
 });
 
@@ -48,6 +48,32 @@ db.connect((err) => {
 //poti cand modifici sa pui rutele de ai nevoie pentru client dupa sistemul de autentificare si crearee cont ori inainte de driver ori dupa. nu cont.
 // Istoricul curselor pentru Client
 
+// RUTA PENTRU DATELE SI STATISTICILE CLIENTULUI
+app.get('/api/client-stats/:id', (req, res) => {
+    const clientId = req.params.id;
+    const query = `
+        SELECT 
+            c.id_client, c.nume, c.mail, c.nr_tel AS telefon, c.adresa, c.metoda_plata,
+            COUNT(cr.id_cursa) AS totalTrips,
+            COALESCE(SUM(cr.pret_final), 0) AS totalSpent,
+            5.0 AS rating
+        FROM client c
+        LEFT JOIN cursa cr ON c.id_client = cr.client_id_client AND cr.status = 'Finalizat'
+        WHERE c.id_client = ?
+        GROUP BY c.id_client
+    `;
+
+    db.query(query, [clientId], (err, results) => {
+        if (err) {
+            console.error("Eroare la extragere stats client:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Client negăsit' });
+        }
+        res.json(results[0]); // Trimitem obiectul către React
+    });
+});
 
 // SISTM DE AUTENTIFICARE
 {
@@ -286,6 +312,8 @@ app.get('/api/driver-reviews/:id_sofer', (req, res) => {
         res.json(results);
     });
 });
+
+
 // rute pentru sofer - cursa
 {
 // 1. ruta de obtinere ce curse sunt active pe categoria noastra(status: 'Waiting Driver')
