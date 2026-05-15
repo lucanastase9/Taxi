@@ -41,7 +41,7 @@ export default function DriverRides() {
       const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
       const categorieSofer = savedUser.categorie;
 
-      const response = await fetch(`https://untitled-i7lc.onrender.com`, {
+      const response = await fetch(`http://localhost:5050/api/available-rides?categorie=${categorieSofer}`, {
         cache: 'no-store'
       });
 
@@ -56,7 +56,7 @@ export default function DriverRides() {
 
   const checkActiveRide = async (id: number) => {
     try {
-      const response = await fetch(`https://untitled-i7lc.onrender.com`, { cache: 'no-store' });
+      const response = await fetch(`http://localhost:5050/api/active-ride/${id}`, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setActiveRide(data); // Dacă are cursă activă, o setăm
@@ -71,7 +71,7 @@ export default function DriverRides() {
     if (!driverId) return;
 
     try {
-      const response = await fetch('https://untitled-i7lc.onrender.com', {
+      const response = await fetch('http://localhost:5050/api/accept-ride', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_cursa: id_cursa, id_sofer: driverId })
@@ -99,7 +99,7 @@ export default function DriverRides() {
     if (!activeRide || !driverId) return;
 
     try {
-      const response = await fetch('https://untitled-i7lc.onrender.com', {
+      const response = await fetch('http://localhost:5050/api/submit-driver-review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -126,7 +126,7 @@ export default function DriverRides() {
     if (!driverId || !activeRide) return;
 
     try {
-      const response = await fetch('https://untitled-i7lc.onrender.com', {
+      const response = await fetch('http://localhost:5050/api/end-ride', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id_cursa: activeRide.id_cursa, id_sofer: driverId })

@@ -17,7 +17,7 @@ export default function ClientReviews() {
           return;
         }
 
-        const response = await fetch(`https://untitled-i7lc.onrender.com`);
+        const response = await fetch(`http://localhost:5050/api/client-reviews/${clientId}`);
         if (response.ok) {
           const data = await response.json();
           setReviews(data);
