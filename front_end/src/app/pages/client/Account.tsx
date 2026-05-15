@@ -105,6 +105,14 @@ export default function ClientAccount() {
 
   if (loading) return <div className="p-8 text-center text-primary font-bold">Loading profile...</div>;
 
+if (!client) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-lg animate-pulse">Se încarcă datele din cloud...</p>
+      </div>
+    );
+  }
+  
   return (
       <div className="p-8 max-w-4xl mx-auto pb-20 relative">
 

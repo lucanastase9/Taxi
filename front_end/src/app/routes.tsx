@@ -14,8 +14,11 @@ import AdminClients from "./pages/admin/AdminClients";
 import AdminDrivers from './pages/admin/AdminDrivers';
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminCars from "./pages/admin/AdminCars";
 import AdminDiscounts from "./pages/admin/AdminDiscounts";
 import DriverReviews from "./pages/driver/Review";
+import AdminHistory from "./pages/admin/AdminHistory";
+import AdminReviews from "./pages/admin/AdminReviews";
 
 export const router = createBrowserRouter([
   {
@@ -37,6 +40,18 @@ export const router = createBrowserRouter([
       {
         path: 'drivers',
         element: <AdminDrivers />
+      },
+      {
+        path: 'cars',
+        element: <AdminCars />
+      },
+      {
+        path: 'history',
+        element: <AdminHistory />
+      },
+      {
+        path: 'reviews',
+        element: <AdminReviews />
       },
       {
         path: 'discounts',

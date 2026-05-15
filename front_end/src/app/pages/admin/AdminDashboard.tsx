@@ -70,7 +70,7 @@ export default function AdminDashboard() {
           </div>
           <div>
             <p className="text-sm text-slate-500 font-medium">Venituri (RON)</p>
-            <p className="text-2xl font-bold text-slate-800">{stats.venit_total} lei</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.venit_total.toFixed(2)} lei</p>
           </div>
         </div>
 

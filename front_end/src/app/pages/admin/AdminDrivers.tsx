@@ -49,7 +49,7 @@ export default function AdminDrivers() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Gestionare Șoferi</h2>
+      <h2 className="text-2xl font-bold mb-6">Gestionare șoferi</h2>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm mb-8 grid grid-cols-3 gap-4 items-end border">
         <div className="col-span-1">

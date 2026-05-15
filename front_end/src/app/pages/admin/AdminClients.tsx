@@ -5,9 +5,22 @@ export default function AdminClients() {
   const [formData, setFormData] = useState({ id_client: null, nume: '', nr_tel: '', mail: '', parola: '' });
   const [isEditing, setIsEditing] = useState(false);
 
+  // STATE-URI NOI PENTRU CĂUTARE ȘI FILTRARE
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [sortBy, setSortBy] = useState('');
+
+  // Modificăm fetch-ul pentru a trimite parametrii prin URL
   const fetchClients = async () => {
     try {
-      const res = await fetch('http://localhost:5050/api/admin/clients');
+      // Construim URL-ul cu parametrii dinamici
+      const queryParams = new URLSearchParams({
+        search: searchTerm,
+        status: filterStatus,
+        sort: sortBy
+      }).toString();
+
+      const res = await fetch(`http://localhost:5050/api/admin/clients?${queryParams}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setClients(data);
@@ -17,9 +30,10 @@ export default function AdminClients() {
     }
   };
 
+  // Se reapelează automat când se schimbă ceva în filtre
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [searchTerm, filterStatus, sortBy]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,25 +58,22 @@ export default function AdminClients() {
   };
 
   const handleDelete = async (id: number) => {
-    if(!confirm("Ești sigur că vrei să arhivezi/dezactivezi acest client?")) return;
-    try {
-      await fetch(`http://localhost:5050/api/admin/clients/${id}`, { method: 'DELETE' });
-      fetchClients();
-    } catch (err) {
-      console.error(err);
-    }
+    if(!confirm("Ești sigur că vrei să dezactivezi acest client?")) return;
+    await fetch(`http://localhost:5050/api/admin/clients/${id}`, { method: 'DELETE' });
+    fetchClients();
   };
 
-  const editClient = (client: any) => {
-    setFormData(client);
-    setIsEditing(true);
+  const handleActivate = async (id: number) => {
+    if(!confirm("Re-activezi acest client?")) return;
+    await fetch(`http://localhost:5050/api/admin/clients/${id}/activate`, { method: 'PUT' });
+    fetchClients();
   };
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Gestionare Clienți (CRUD)</h2>
+      <h2 className="text-2xl font-bold mb-6">Gestionare Clienți</h2>
 
-      {/* Formular */}
+      {/* FORMULAR ADĂUGARE/EDITARE */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm mb-8 flex gap-4 items-end border">
         <div className="flex-1">
           <label className="block text-sm mb-1">Nume Complet</label>
@@ -90,7 +101,34 @@ export default function AdminClients() {
         )}
       </form>
 
-      {/* Tabel */}
+      {/* ZONA DE CĂUTARE ȘI FILTRARE (NOU) */}
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-4 flex gap-4 items-center border">
+        <div className="flex-1">
+          <input 
+            type="text" 
+            placeholder="Caută după nume sau email..." 
+            className="w-full border p-2 rounded bg-slate-50"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <select className="border p-2 rounded bg-slate-50" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <option value="">Toți Clienții</option>
+            <option value="1">Doar Activi</option>
+            <option value="0">Doar Inactivi</option>
+          </select>
+        </div>
+        <div>
+          <select className="border p-2 rounded bg-slate-50" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="id_desc">Cei mai noi primii</option>
+            <option value="nume_asc">Alfabetic (A-Z)</option>
+            <option value="km_desc">Cei mai mulți KM</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Tabel Clienți */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b">
@@ -98,7 +136,7 @@ export default function AdminClients() {
               <th className="p-4">ID</th>
               <th className="p-4">Nume</th>
               <th className="p-4">Email</th>
-              <th className="p-4">Telefon</th>
+              <th className="p-4">KM Parcurși</th>
               <th className="p-4">Status</th>
               <th className="p-4 text-right">Acțiuni</th>
             </tr>
@@ -109,20 +147,26 @@ export default function AdminClients() {
                 <td className="p-4">#{c.id_client}</td>
                 <td className="p-4 font-medium">{c.nume}</td>
                 <td className="p-4">{c.mail}</td>
-                <td className="p-4">0{c.nr_tel}</td>
+                <td className="p-4 font-bold text-slate-500">{c.km_parcursi} km</td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded text-xs ${c.activ === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {c.activ === 1 ? 'Activ' : 'Inactiv'}
                   </span>
                 </td>
                 <td className="p-4 text-right space-x-2">
-                  <button onClick={() => editClient(c)} className="text-blue-600 hover:underline">Editează</button>
-                  <button onClick={() => handleDelete(c.id_client)} disabled={c.activ === 0} className={`text-red-600 hover:underline ${c.activ === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    Dezactivează
-                  </button>
+                  <button onClick={() => { setFormData(c); setIsEditing(true); }} className="text-blue-600 hover:underline">Editează</button>
+                  
+                  {c.activ === 1 ? (
+                    <button onClick={() => handleDelete(c.id_client)} className="text-red-600 hover:underline">Dezactivează</button>
+                  ) : (
+                    <button onClick={() => handleActivate(c.id_client)} className="text-green-600 font-bold hover:underline">Activează</button>
+                  )}
                 </td>
               </tr>
             ))}
+            {clients.length === 0 && (
+              <tr><td colSpan={6} className="p-4 text-center text-gray-500">Niciun client nu a fost găsit.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

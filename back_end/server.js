@@ -9,13 +9,13 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 //LUCA
 // Configurare conexiune baza de date pentru DBngin
-const db = mysql.createConnection({
+/*const db = mysql.createConnection({
     host: 'localhost', 
     user: 'root',      
     password: '',      
     database: 'taxidb',
     port: 3306         
-});
+});*/
 
 // Alexandra
 /*const db = mysql.createConnection({
@@ -25,7 +25,7 @@ const db = mysql.createConnection({
     database: 'taxi_service',
     port: 3306
 });*/
-/*
+
 //Aiven.io
 const db = mysql.createConnection({
     host: 'taxidb-bordeialexandraioana-taxiservice.j.aivencloud.com', // NU mai e localhost
@@ -34,7 +34,7 @@ const db = mysql.createConnection({
     database: 'defaultdb',
     port: 11584
 });
-*/
+
 
 db.connect((err) => {
     if (err) {
@@ -598,19 +598,7 @@ const PORT = 5050;
 // RUTE ADMIN - GESTIONARE CLIENTI (CRUD)
 // ==========================================
 
-// 1. VIZUALIZARE (Read)
-app.get('/api/admin/clients', (req, res) => {
-    // Folosim CAST pentru a transforma BIT(1) într-un număr lizibil pentru Frontend
-    const query = 'SELECT id_client, nume, nr_tel, mail, parola, km_parcursi, adresa, CAST(activ AS UNSIGNED) as activ FROM client ORDER BY id_client DESC';
-    
-    db.query(query, (err, results) => {
-        if (err) {
-            console.error("Eroare la citire clienți:", err);
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(results);
-    });
-});
+
 
 // 2. ADĂUGARE (Create)
 app.post('/api/admin/clients', (req, res) => {
@@ -814,3 +802,154 @@ app.listen(PORT, () => {
 });
 
 // ruta de creeare cursa client
+
+
+// ==========================================
+// OPȚIUNEA 1: GESTIUNE FLOTĂ AUTO (1:1)
+// ==========================================
+
+// A. Aducem toate mașinile + numele șoferului (JOIN)
+app.get('/api/admin/cars', (req, res) => {
+    const query = `
+        SELECT m.*, s.nume as nume_sofer 
+        FROM masina m 
+        JOIN sofer s ON m.sofer_id_sofer = s.id_sofer
+    `;
+    db.query(query, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// B. Aducem DOAR șoferii care NU au mașină asignată (Subquery)
+app.get('/api/admin/drivers-without-cars', (req, res) => {
+    const query = `
+        SELECT id_sofer, nume 
+        FROM sofer 
+        WHERE activ = 1 AND id_sofer NOT IN (SELECT sofer_id_sofer FROM masina)
+    `;
+    db.query(query, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// C. Adăugare mașină nouă
+app.post('/api/admin/cars', (req, res) => {
+    const { sofer_id_sofer, nr_inmatriculare, model, categorie, culoare, an_fabricare } = req.body;
+    const query = 'INSERT INTO masina (sofer_id_sofer, nr_inmatriculare, model, categorie, km_parcursi, culoare, an_fabricare) VALUES (?, ?, ?, ?, 0, ?, ?)';
+    
+    db.query(query, [sofer_id_sofer, nr_inmatriculare, model, categorie, culoare, an_fabricare], (err, result) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, message: "Mașină adăugată și asignată șoferului!" });
+    });
+});
+
+// D. Ștergere mașină (Eliberare șofer)
+app.delete('/api/admin/cars/:id_sofer', (req, res) => {
+    const query = 'DELETE FROM masina WHERE sofer_id_sofer = ?';
+    db.query(query, [req.params.id_sofer], (err, result) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, message: "Mașina a fost ștearsă!" });
+    });
+});
+
+// ==========================================
+// OPȚIUNEA 2: ISTORIC CURSE (MULTI-JOIN 4 Tabele)
+// ==========================================
+app.get('/api/admin/history', (req, res) => {
+    const query = `
+        SELECT 
+            c.id_cursa, 
+            cl.nume as nume_client, 
+            s.nume as nume_sofer, 
+            c.plecare, 
+            c.destinatie, 
+            c.data_comanda, 
+            c.pret_final, 
+            c.status,
+            p.metoda_plata
+        FROM cursa c
+        JOIN client cl ON c.client_id_client = cl.id_client
+        JOIN sofer s ON c.sofer_id_sofer = s.id_sofer
+        LEFT JOIN plata p ON c.id_cursa = p.cursa_id_cursa
+        ORDER BY c.data_comanda DESC
+    `;
+    db.query(query, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// 1. VIZUALIZARE AVANSATĂ CLIENȚI (Cu Search, Filter și Sort)
+app.get('/api/admin/clients', (req, res) => {
+    // Extragem parametrii trimiși de frontend (din URL)
+    const { search, status, sort } = req.query;
+    
+    // Începem o propoziție SQL de bază (1=1 este un truc ca să putem adăuga AND-uri ușor)
+    let query = 'SELECT id_client, nume, nr_tel, mail, parola, km_parcursi, adresa, CAST(activ AS UNSIGNED) as activ FROM client WHERE 1=1';
+    let queryParams = [];
+
+    // Dacă utilizatorul a scris ceva în bara de căutare (căutăm în nume sau email)
+    if (search) {
+        query += ' AND (nume LIKE ? OR mail LIKE ?)';
+        queryParams.push(`%${search}%`, `%${search}%`);
+    }
+
+    // Dacă a selectat doar "Activi" sau doar "Inactivi"
+    if (status !== undefined && status !== '') {
+        query += ' AND activ = ?';
+        queryParams.push(Number(status));
+    }
+
+    // Ordonarea datelor
+    if (sort === 'km_desc') {
+        query += ' ORDER BY km_parcursi DESC';
+    } else if (sort === 'nume_asc') {
+        query += ' ORDER BY nume ASC';
+    } else {
+        query += ' ORDER BY id_client DESC'; // Implicit, cei mai noi primii
+    }
+
+    db.query(query, queryParams, (err, results) => {
+        if (err) {
+            console.error("Eroare la citire clienți:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(results);
+    });
+});
+
+
+// ==========================================
+// OPȚIUNEA 4: MODERARE RECENZII (JOIN)
+// ==========================================
+
+// A. Aducem toate recenziile + Nume Client + Nume Șofer
+app.get('/api/admin/reviews', (req, res) => {
+    const query = `
+        SELECT 
+            r.id_recenzie, 
+            r.rating, 
+            r.comentarii, 
+            c.nume AS nume_client, 
+            s.nume AS nume_sofer
+        FROM recenzie r
+        JOIN client c ON r.client_id_client = c.id_client
+        JOIN sofer s ON r.sofer_id_sofer = s.id_sofer
+        ORDER BY r.id_recenzie DESC
+    `;
+    db.query(query, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// B. Ștergere recenzie (Moderare)
+app.delete('/api/admin/reviews/:id', (req, res) => {
+    const query = 'DELETE FROM recenzie WHERE id_recenzie = ?';
+    db.query(query, [req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.json({ success: true, message: "Recenzia a fost ștearsă!" });
+    });
+});
